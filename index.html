@@ -299,9 +299,9 @@
         <label for="registro">Tipo de registro <span class="req">*</span></label>
         <select id="registro" onchange="atualizarSetores()">
           <option value="">Selecione...</option>
-          <option value="Avarias">Avarias</option>
-          <option value="Insumos">Insumos</option>
-          <option value="Relatórios">Relatórios</option>
+          <option value="AVARIAS">AVARIAS</option>
+          <option value="TRANSF. PRODUÇÃO">TRANSF. PRODUÇÃO</option>
+          <option value="MOKI">MOKI</option>
         </select>
       </div>
 
@@ -352,9 +352,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycby0OPdq3r6ktEM0mwd7-REz
 
 // Setores por tipo de registro
 const SETORES = {
-  "Avarias":   ["Padaria", "Açougue", "Hortifruti", "Frios"],
-  "Insumos":   ["Padaria", "Hortifruti", "Refeição"],
-  "Relatórios":["Padaria", "Açougue", "Hortifruti", "Frios", "Gestores"]
+  "AVARIAS":   ["PADARIA", "AÇOUGUE", "HORTIFRUTI", "FRIOS"],
+  "TRANSF. PRODUÇÃO":   ["PADARIA", "HORTIFRUTI", "REFEIÇÃO"],
+  "MOKI":["PADARIA", "AÇOUGUE", "HORTIFRUTI", "FRIOS", "GESTORES"]
 };
 
 // ╔══════════════════════════════════════════════════════╗
