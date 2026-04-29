@@ -381,7 +381,7 @@ let estado = {
   }
 
   // Calcula expiração: data informada + 24 horas (início do dia = meia-noite local)
-  const inicio    = new Date(data + "T00:00:00");
+  const inicio = new Date(data + "T08:30:00");
   const expiracao = new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
   const agora     = new Date();
 
@@ -396,7 +396,7 @@ let estado = {
   // Atualiza subtítulo
   const [ano, mes, dia] = data.split("-");
   document.getElementById("subtitulo-data").textContent =
-    `Referente ao dia ${dia}/${mes}/${ano}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
+    `Referente ao dia anterior (${dia}/${mes}/${ano}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia seguinte.`;
 
   // Inicia contador
   iniciarTimer();
@@ -569,7 +569,7 @@ async function enviarFormulario() {
   try {
     const params = new URLSearchParams({ action: "salvarResposta", ...payload });
     const resp = await fetch(`${API_URL}?${params.toString()}`);
-    
+
     const json = await resp.json();
 
     if (json.ok) {
