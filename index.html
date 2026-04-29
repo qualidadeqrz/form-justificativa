@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulário de Justificativa</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:       #1e3a5f;
+      --primary-light: #2a5298;
+      --accent:        #e8f0fe;
+      --success-bg:    #d1fae5;
+      --success-bdr:   #6ee7b7;
+      --success-txt:   #065f46;
+      --error-bg:      #fee2e2;
+      --error-bdr:     #fca5a5;
+      --error-txt:     #991b1b;
+      --warn-bg:       #fef3c7;
+      --warn-bdr:      #fcd34d;
+      --warn-txt:      #92400e;
+      --text:          #1f2937;
+      --muted:         #6b7280;
+      --border:        #d1d5db;
+      --bg:            #f0f4f8;
+      --radius:        8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 48px;
+    }
+
+    /* ── Topo / Logo ── */
+    .top-bar {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .top-bar .logo-icon {
+      width: 40px; height: 40px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 1.2rem;
+    }
+    .top-bar h2 { font-size: 1rem; color: var(--primary); font-weight: 700; }
+    .top-bar p  { font-size: .78rem; color: var(--muted); }
+
+    /* ── Card principal ── */
+    .card {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08), 0 6px 20px rgba(0,0,0,.07);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 520px;
+    }
+    @media (max-width: 480px) { .card { padding: 24px 18px; } }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .card-sub {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* ── Contador de tempo ── */
+    .timer-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      border: 1px solid #c7d9f9;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      margin-bottom: 24px;
+      font-size: .85rem;
+      color: var(--primary-light);
+      font-weight: 600;
+    }
+    .timer-bar .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+    .timer-bar.expired { background: var(--error-bg); border-color: var(--error-bdr); color: var(--error-txt); }
+    .timer-bar.expired .dot { background: var(--error-txt); animation: none; }
+
+    /* ── Campos ── */
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+    .field label { font-size: .875rem; font-weight: 600; color: var(--text); }
+    .field label span.req { color: #e53e3e; margin-left: 2px; }
+
+    .field input,
+    .field select,
+    .field textarea {
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: .95rem;
+      color: var(--text);
+      background: white;
+      transition: border-color .15s, box-shadow .15s;
+      width: 100%;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(42,82,152,.15);
+    }
+    .field textarea { min-height: 130px; resize: vertical; }
+    ::placeholder { color: #9ca3af; }
+
+    /* Badge do gestor identificado */
+    .gestor-badge {
+      display: none;
+      background: var(--accent);
+      border: 1px solid #c7d9f9;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: .85rem;
+      color: var(--primary);
+      margin-top: 8px;
+    }
+    .gestor-badge strong { font-weight: 700; }
+
+    /* ── Botão ── */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--primary);
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      margin-top: 6px;
+      letter-spacing: .01em;
+    }
+    .btn:hover   { background: var(--primary-light); }
+    .btn:active  { transform: translateY(1px); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    /* ── Alertas ── */
+    .alert {
+      display: none;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: .875rem;
+      line-height: 1.5;
+      margin-top: 16px;
+    }
+    .alert.success { background: var(--success-bg); border: 1px solid var(--success-bdr); color: var(--success-txt); }
+    .alert.error   { background: var(--error-bg);   border: 1px solid var(--error-bdr);   color: var(--error-txt); }
+    .alert.warn    { background: var(--warn-bg);     border: 1px solid var(--warn-bdr);    color: var(--warn-txt); }
+    .alert.show    { display: block; }
+
+    /* ── Tela de expirado / sucesso total ── */
+    .full-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 40px 24px;
+    }
+    .full-screen.show { display: flex; }
+    .full-screen .icon { font-size: 3.5rem; margin-bottom: 16px; }
+    .full-screen h2    { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+    .full-screen p     { color: var(--muted); line-height: 1.6; max-width: 360px; }
+
+    /* ── Divisor ── */
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+
+    /* ── Step indicator ── */
+    .steps {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 28px;
+    }
+    .step-dot {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: #e5e7eb;
+      transition: background .3s;
+    }
+    .step-dot.active   { background: var(--primary-light); }
+    .step-dot.done     { background: var(--primary); }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <div class="logo-icon">📋</div>
+    <div>
+      <h2>Registro de Justificativas</h2>
+      <p>Formulário diário de não conformidades</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TELA: Link Expirado
+  ══════════════════════════════════════════ -->
+  <div class="card" id="tela-expirado" style="display:none">
+    <div class="full-screen show">
+      <div class="icon">⏰</div>
+      <h2>Link expirado</h2>
+      <p>O prazo de 24 horas para preenchimento deste formulário encerrou.<br><br>Um novo link será enviado no próximo dia útil.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TELA: Data inválida (sem parâmetro)
+  ══════════════════════════════════════════ -->
+  <div class="card" id="tela-invalido" style="display:none">
+    <div class="full-screen show">
+      <div class="icon">🔗</div>
+      <h2>Link inválido</h2>
+      <p>Este link não contém uma data de referência.<br><br>Verifique se você recebeu o link correto pelo WhatsApp ou e-mail.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TELA: Formulário principal
+  ══════════════════════════════════════════ -->
+  <div class="card" id="tela-form">
+
+    <div class="card-title">Justificativa de Não Conformidade</div>
+    <p class="card-sub" id="subtitulo-data">Preencha todos os campos abaixo.</p>
+
+    <!-- Barra de tempo restante -->
+    <div class="timer-bar" id="timer-bar">
+      <span class="dot"></span>
+      <span id="timer-texto">Calculando...</span>
+    </div>
+
+    <!-- Indicador de etapas -->
+    <div class="steps">
+      <div class="step-dot active"  id="dot-1"></div>
+      <div class="step-dot"         id="dot-2"></div>
+      <div class="step-dot"         id="dot-3"></div>
+    </div>
+
+    <!-- ── ETAPA 1: CPF ── -->
+    <div id="etapa-cpf">
+      <div class="field">
+        <label for="cpf">CPF <span class="req">*</span></label>
+        <input type="text" id="cpf" placeholder="000.000.000-00" maxlength="14" inputmode="numeric">
+      </div>
+      <div class="gestor-badge" id="gestor-badge">
+        ✅ Identificado: <strong id="gestor-nome"></strong> — <span id="gestor-loja"></span>
+      </div>
+      <div class="alert" id="cpf-alert"></div>
+      <button class="btn" id="btn-cpf" onclick="verificarCPF()">Verificar CPF</button>
+    </div>
+
+    <!-- ── ETAPA 2: Tipo de registro + setor ── -->
+    <div id="etapa-registro" style="display:none">
+      <hr>
+
+      <div class="field">
+        <label for="registro">Tipo de registro <span class="req">*</span></label>
+        <select id="registro" onchange="atualizarSetores()">
+          <option value="">Selecione...</option>
+          <option value="Avarias">Avarias</option>
+          <option value="Insumos">Insumos</option>
+          <option value="Relatórios">Relatórios</option>
+        </select>
+      </div>
+
+      <div class="field" id="campo-setor" style="display:none">
+        <label for="setor">Setor <span class="req">*</span></label>
+        <select id="setor">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+
+      <button class="btn" id="btn-registro" onclick="avancarParaJustificativa()">Continuar →</button>
+      <div class="alert" id="registro-alert"></div>
+    </div>
+
+    <!-- ── ETAPA 3: Justificativa + envio ── -->
+    <div id="etapa-justificativa" style="display:none">
+      <hr>
+
+      <div class="field">
+        <label for="justificativa">Justificativa <span class="req">*</span></label>
+        <textarea id="justificativa" placeholder="Descreva detalhadamente o motivo da não conformidade..."></textarea>
+      </div>
+
+      <div class="alert" id="envio-alert"></div>
+      <button class="btn" id="btn-enviar" onclick="enviarFormulario()">Enviar justificativa</button>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       TELA: Envio confirmado
+  ══════════════════════════════════════════ -->
+  <div class="card" id="tela-sucesso" style="display:none">
+    <div class="full-screen show">
+      <div class="icon">✅</div>
+      <h2>Justificativa registrada!</h2>
+      <p id="sucesso-detalhe">Sua resposta foi salva com sucesso.</p>
+    </div>
+  </div>
+
+
+<script>
+// ╔══════════════════════════════════════════════════════╗
+// ║  ⚙️  CONFIGURAÇÃO — altere apenas esta seção         ║
+// ╚══════════════════════════════════════════════════════╝
+const API_URL = "SUA_URL_DO_APPS_SCRIPT_AQUI";
+// Exemplo: "https://script.google.com/macros/s/XXXXXXXXXX/exec"
+
+// Setores por tipo de registro
+const SETORES = {
+  "Avarias":   ["Padaria", "Açougue", "Hortifruti", "Frios"],
+  "Insumos":   ["Padaria", "Hortifruti", "Refeição"],
+  "Relatórios":["Padaria", "Açougue", "Hortifruti", "Frios", "Gestores"]
+};
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  Estado da aplicação                                 ║
+// ╚══════════════════════════════════════════════════════╝
+let estado = {
+  dataFormulario: null,   // "2026-04-29"
+  dataExpiracao:  null,   // objeto Date (dataFormulario + 24h)
+  gestor: null,           // { nome, cpf, loja }
+  intervaloTimer: null
+};
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  Inicialização                                       ║
+// ╚══════════════════════════════════════════════════════╝
+(function init() {
+  const params = new URLSearchParams(window.location.search);
+  const data   = params.get("data"); // "2026-04-29"
+
+  // Valida parâmetro de data
+  if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    mostrarTela("invalido");
+    return;
+  }
+
+  // Calcula expiração: data informada + 24 horas (início do dia = meia-noite local)
+  const inicio    = new Date(data + "T00:00:00");
+  const expiracao = new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
+  const agora     = new Date();
+
+  if (agora >= expiracao) {
+    mostrarTela("expirado");
+    return;
+  }
+
+  estado.dataFormulario = data;
+  estado.dataExpiracao  = expiracao;
+
+  // Atualiza subtítulo
+  const [ano, mes, dia] = data.split("-");
+  document.getElementById("subtitulo-data").textContent =
+    `Referente ao dia ${dia}/${mes}/${ano}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
+
+  // Inicia contador
+  iniciarTimer();
+  mostrarTela("form");
+})();
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  Timer                                               ║
+// ╚══════════════════════════════════════════════════════╝
+function iniciarTimer() {
+  function atualizar() {
+    const restante = estado.dataExpiracao - new Date();
+    if (restante <= 0) {
+      clearInterval(estado.intervaloTimer);
+      mostrarTela("expirado");
+      return;
+    }
+    const h  = Math.floor(restante / 3600000);
+    const m  = Math.floor((restante % 3600000) / 60000);
+    const s  = Math.floor((restante % 60000) / 1000);
+    const pad = n => String(n).padStart(2, "0");
+    document.getElementById("timer-texto").textContent =
+      `Tempo restante: ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+  }
+  atualizar();
+  estado.intervaloTimer = setInterval(atualizar, 1000);
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  Máscara de CPF                                      ║
+// ╚══════════════════════════════════════════════════════╝
+document.getElementById("cpf").addEventListener("input", function() {
+  let v = this.value.replace(/\D/g, "").slice(0, 11);
+  if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+  else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+  else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+  this.value = v;
+});
+
+document.getElementById("cpf").addEventListener("keydown", function(e) {
+  if (e.key === "Enter") verificarCPF();
+});
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  ETAPA 1 — Verificar CPF                             ║
+// ╚══════════════════════════════════════════════════════╝
+async function verificarCPF() {
+  const cpf    = document.getElementById("cpf").value.trim();
+  const alert  = document.getElementById("cpf-alert");
+  const btn    = document.getElementById("btn-cpf");
+  const badge  = document.getElementById("gestor-badge");
+
+  limparAlerta(alert);
+  badge.style.display = "none";
+
+  if (!cpf) {
+    mostrarAlerta(alert, "error", "⚠️ Informe o CPF antes de continuar.");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Verificando...';
+
+  try {
+    const url  = `${API_URL}?action=validarCPF&cpf=${encodeURIComponent(cpf)}`;
+    const resp = await fetch(url);
+    const json = await resp.json();
+
+    if (json.ok) {
+      estado.gestor = json;
+
+      document.getElementById("gestor-nome").textContent = json.nome;
+      document.getElementById("gestor-loja").textContent = json.loja;
+      badge.style.display = "block";
+
+      // Avança para próxima etapa
+      avancarStep(2);
+      document.getElementById("etapa-registro").style.display = "block";
+    } else {
+      mostrarAlerta(alert, "error", "❌ " + json.erro);
+    }
+  } catch (err) {
+    mostrarAlerta(alert, "error", "❌ Erro de conexão. Verifique sua internet e tente novamente.");
+  } finally {
+    btn.disabled  = false;
+    btn.innerHTML = "Verificar CPF";
+  }
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  ETAPA 2 — Tipo de registro e setor                  ║
+// ╚══════════════════════════════════════════════════════╝
+function atualizarSetores() {
+  const registro   = document.getElementById("registro").value;
+  const campoSetor = document.getElementById("campo-setor");
+  const selectSetor= document.getElementById("setor");
+
+  if (!registro) {
+    campoSetor.style.display = "none";
+    return;
+  }
+
+  const opcoes = SETORES[registro] || [];
+  selectSetor.innerHTML = '<option value="">Selecione...</option>';
+  opcoes.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    selectSetor.appendChild(opt);
+  });
+  campoSetor.style.display = "flex";
+}
+
+function avancarParaJustificativa() {
+  const registro = document.getElementById("registro").value;
+  const setor    = document.getElementById("setor").value;
+  const alert    = document.getElementById("registro-alert");
+
+  limparAlerta(alert);
+
+  if (!registro) {
+    mostrarAlerta(alert, "error", "⚠️ Selecione o tipo de registro.");
+    return;
+  }
+  if (!setor) {
+    mostrarAlerta(alert, "error", "⚠️ Selecione o setor.");
+    return;
+  }
+
+  avancarStep(3);
+  document.getElementById("etapa-justificativa").style.display = "block";
+  document.getElementById("justificativa").focus();
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  ETAPA 3 — Enviar formulário                         ║
+// ╚══════════════════════════════════════════════════════╝
+async function enviarFormulario() {
+  const justificativa = document.getElementById("justificativa").value.trim();
+  const alert         = document.getElementById("envio-alert");
+  const btn           = document.getElementById("btn-enviar");
+
+  limparAlerta(alert);
+
+  if (justificativa.length < 10) {
+    mostrarAlerta(alert, "error", "⚠️ Escreva uma justificativa com pelo menos 10 caracteres.");
+    return;
+  }
+
+  // Verifica se ainda está dentro do prazo
+  if (new Date() >= estado.dataExpiracao) {
+    mostrarTela("expirado");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Enviando...';
+
+  const payload = {
+    cpf:           estado.gestor.cpf,
+    nome:          estado.gestor.nome,
+    loja:          estado.gestor.loja,
+    data:          estado.dataFormulario,
+    horario:       new Date().toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"}),
+    registro:      document.getElementById("registro").value,
+    setor:         document.getElementById("setor").value,
+    justificativa: justificativa
+  };
+
+  try {
+    const resp = await fetch(API_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ action: "salvarResposta", ...payload })
+    });
+    const json = await resp.json();
+
+    if (json.ok) {
+      clearInterval(estado.intervaloTimer);
+      document.getElementById("sucesso-detalhe").innerHTML =
+        `<strong>${estado.gestor.nome}</strong>, sua justificativa de <strong>${payload.registro} — ${payload.setor}</strong> foi registrada com sucesso em ${payload.horario}.`;
+      mostrarTela("sucesso");
+    } else {
+      mostrarAlerta(alert, "error", "❌ " + (json.erro || "Erro ao salvar. Tente novamente."));
+      btn.disabled  = false;
+      btn.innerHTML = "Enviar justificativa";
+    }
+  } catch (err) {
+    mostrarAlerta(alert, "error", "❌ Erro de conexão. Verifique sua internet e tente novamente.");
+    btn.disabled  = false;
+    btn.innerHTML = "Enviar justificativa";
+  }
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  Utilitários de UI                                   ║
+// ╚══════════════════════════════════════════════════════╝
+function mostrarTela(nome) {
+  ["form", "expirado", "invalido", "sucesso"].forEach(t => {
+    document.getElementById("tela-" + t).style.display = (t === nome) ? "block" : "none";
+  });
+}
+
+function mostrarAlerta(el, tipo, msg) {
+  el.textContent = msg;
+  el.className   = `alert ${tipo} show`;
+}
+
+function limparAlerta(el) {
+  el.textContent = "";
+  el.className   = "alert";
+}
+
+function avancarStep(n) {
+  [1, 2, 3].forEach(i => {
+    const dot = document.getElementById("dot-" + i);
+    if (i < n)       dot.className = "step-dot done";
+    else if (i === n) dot.className = "step-dot active";
+    else              dot.className = "step-dot";
+  });
+}
+</script>
+</body>
+</html>
