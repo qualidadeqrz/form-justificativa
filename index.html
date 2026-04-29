@@ -393,8 +393,12 @@ let estado = {
   estado.dataFormulario = data;
   estado.dataExpiracao  = expiracao;
 
-  // Atualiza subtítulo
-  const [ano, mes, dia] = data.split("-");
+  // Atualiza subtítulo — exibe o dia anterior à data do parâmetro
+  const diaAnteriorObj = new Date(data + "T12:00:00");
+  diaAnteriorObj.setDate(diaAnteriorObj.getDate() - 1);
+  const dia = String(diaAnteriorObj.getDate()).padStart(2, "0");
+  const mes = String(diaAnteriorObj.getMonth() + 1).padStart(2, "0");
+  const ano = diaAnteriorObj.getFullYear();
   document.getElementById("subtitulo-data").textContent =
     `Referente ao dia anterior (${dia}/${mes}/${ano}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia seguinte.`;
 
