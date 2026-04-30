@@ -299,9 +299,9 @@
         <label for="registro">Tipo de registro <span class="req">*</span></label>
         <select id="registro" onchange="atualizarSetores()">
           <option value="">Selecione...</option>
-          <option value="AVARIAS">AVARIAS</option>
-          <option value="TRANSF. PRODUÇÃO">TRANSF. PRODUÇÃO</option>
-          <option value="MOKI">MOKI</option>
+          <option value="Avarias">Avarias</option>
+          <option value="Insumos">Insumos</option>
+          <option value="Relatórios">Relatórios</option>
         </select>
       </div>
 
@@ -347,14 +347,14 @@
 // ╔══════════════════════════════════════════════════════╗
 // ║  ⚙️  CONFIGURAÇÃO — altere apenas esta seção         ║
 // ╚══════════════════════════════════════════════════════╝
-const API_URL = "https://script.google.com/macros/s/AKfycby0OPdq3r6ktEM0mwd7-REzFipKVoIUGJ7a0xcv5P1Zm0cMRyo76kaurk8HKBHYpOX6CA/exec";
+const API_URL = "SUA_URL_DO_APPS_SCRIPT_AQUI";
 // Exemplo: "https://script.google.com/macros/s/XXXXXXXXXX/exec"
 
 // Setores por tipo de registro
 const SETORES = {
-  "AVARIAS":   ["PADARIA", "AÇOUGUE", "HORTIFRUTI", "FRIOS"],
-  "TRANSF. PRODUÇÃO":   ["PADARIA", "HORTIFRUTI", "REFEIÇÃO"],
-  "MOKI":["PADARIA", "AÇOUGUE", "HORTIFRUTI", "FRIOS", "GESTORES"]
+  "Avarias":   ["Padaria", "Açougue", "Hortifruti", "Frios"],
+  "Insumos":   ["Padaria", "Hortifruti", "Refeição"],
+  "Relatórios":["Padaria", "Açougue", "Hortifruti", "Frios", "Gestores"]
 };
 
 // ╔══════════════════════════════════════════════════════╗
@@ -380,8 +380,8 @@ let estado = {
     return;
   }
 
-  // Calcula expiração: data informada + 24 horas (início do dia = meia-noite local)
-  const inicio = new Date(data + "T08:30:00");
+  // Calcula janela: das 08h30 do dia informado até 08h30 do dia seguinte
+  const inicio    = new Date(data + "T08:30:00");
   const expiracao = new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
   const agora     = new Date();
 
@@ -390,15 +390,16 @@ let estado = {
     return;
   }
 
+  if (agora < inicio) {
+    mostrarTela("invalido");
+    return;
+  }
+
   estado.dataFormulario = data;
   estado.dataExpiracao  = expiracao;
 
-  // Atualiza subtítulo — exibe o dia anterior à data do parâmetro
-  const diaAnteriorObj = new Date(data + "T12:00:00");
-  diaAnteriorObj.setDate(diaAnteriorObj.getDate() - 1);
-  const dia = String(diaAnteriorObj.getDate()).padStart(2, "0");
-  const mes = String(diaAnteriorObj.getMonth() + 1).padStart(2, "0");
-  const ano = diaAnteriorObj.getFullYear();
+  // Atualiza subtítulo — referente ao dia ANTERIOR
+  const [ano, mes, dia] = data.split("-");
   document.getElementById("subtitulo-data").textContent =
     `Referente ao dia anterior (${dia}/${mes}/${ano}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia seguinte.`;
 
@@ -473,7 +474,7 @@ async function verificarCPF() {
       estado.gestor = json;
 
       document.getElementById("gestor-nome").textContent = json.nome;
-      document.getElementById("gestor-loja").textContent = json.loja;
+      document.getElementById("gestor-loja").textContent = `${json.cargo} — ${json.loja}`;
       badge.style.display = "block";
 
       // Avança para próxima etapa
@@ -562,6 +563,7 @@ async function enviarFormulario() {
   const payload = {
     cpf:           estado.gestor.cpf,
     nome:          estado.gestor.nome,
+    cargo:         estado.gestor.cargo,
     loja:          estado.gestor.loja,
     data:          estado.dataFormulario,
     horario:       new Date().toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"}),
@@ -573,7 +575,6 @@ async function enviarFormulario() {
   try {
     const params = new URLSearchParams({ action: "salvarResposta", ...payload });
     const resp = await fetch(`${API_URL}?${params.toString()}`);
-
     const json = await resp.json();
 
     if (json.ok) {
