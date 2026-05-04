@@ -271,19 +271,12 @@
       <span id="timer-texto">Calculando...</span>
     </div>
 
-    <!-- Seletor de data referente (visível quando há múltiplas datas) -->
-    <div class="field" id="campo-data-ref" style="display:none">
-      <label for="data-ref">Data referente <span class="req">*</span></label>
-      <select id="data-ref">
-        <option value="">Selecione a data...</option>
-      </select>
-    </div>
-
     <!-- Indicador de etapas -->
     <div class="steps">
       <div class="step-dot active"  id="dot-1"></div>
       <div class="step-dot"         id="dot-2"></div>
       <div class="step-dot"         id="dot-3"></div>
+      <div class="step-dot"         id="dot-4" style="display:none"></div>
     </div>
 
     <!-- ── ETAPA 1: CPF ── -->
@@ -299,7 +292,20 @@
       <button class="btn" id="btn-cpf" onclick="verificarCPF()">Verificar CPF</button>
     </div>
 
-    <!-- ── ETAPA 2: Tipo de registro + setor ── -->
+    <!-- ── ETAPA 2: Data referente (apenas quando há múltiplas datas) ── -->
+    <div id="etapa-data" style="display:none">
+      <hr>
+      <div class="field" id="campo-data-ref">
+        <label for="data-ref">Data referente <span class="req">*</span></label>
+        <select id="data-ref">
+          <option value="">Selecione a data...</option>
+        </select>
+      </div>
+      <div class="alert" id="data-alert"></div>
+      <button class="btn" onclick="avancarParaRegistro()">Continuar →</button>
+    </div>
+
+    <!-- ── ETAPA 3: Tipo de registro + setor ── -->
     <div id="etapa-registro" style="display:none">
       <hr>
 
@@ -367,6 +373,7 @@ const SETORES = {
 // ╔══════════════════════════════════════════════════════╗
 // ║  Estado da aplicação                                 ║
 // ╚══════════════════════════════════════════════════════╝
+let totalSteps = 3;
 let estado = {
   dataFormulario: null,   // data da URL (?data=)
   dataExpiracao:  null,   // objeto Date (inicio + 24h)
@@ -436,14 +443,12 @@ function gerarPeriodo(inicio, fim) {
 
   // Preenche o seletor de data referente
   const selectDataRef = document.getElementById("data-ref");
-  const campoDataRef  = document.getElementById("campo-data-ref");
 
   if (datas.length === 1) {
-    // Apenas uma data — pré-seleciona e esconde o campo
+    // Apenas uma data — pré-seleciona (etapa-data ficará oculta)
     selectDataRef.innerHTML = `<option value="${datas[0]}" selected>${formatarData(datas[0])}</option>`;
-    campoDataRef.style.display = "none";
   } else {
-    // Múltiplas datas — mostra o seletor
+    // Múltiplas datas — etapa extra de seleção após CPF
     selectDataRef.innerHTML = '<option value="">Selecione a data...</option>';
     datas.forEach(d => {
       const opt = document.createElement("option");
@@ -451,7 +456,8 @@ function gerarPeriodo(inicio, fim) {
       opt.textContent = formatarData(d);
       selectDataRef.appendChild(opt);
     });
-    campoDataRef.style.display = "flex";
+    totalSteps = 4;
+    document.getElementById("dot-4").style.display = "block";
   }
 
   // Atualiza subtítulo
@@ -538,7 +544,11 @@ async function verificarCPF() {
 
       // Avança para próxima etapa
       avancarStep(2);
-      document.getElementById("etapa-registro").style.display = "block";
+      if (totalSteps === 4) {
+        document.getElementById("etapa-data").style.display = "block";
+      } else {
+        document.getElementById("etapa-registro").style.display = "block";
+      }
     } else {
       mostrarAlerta(alert, "error", "❌ " + json.erro);
     }
@@ -551,7 +561,25 @@ async function verificarCPF() {
 }
 
 // ╔══════════════════════════════════════════════════════╗
-// ║  ETAPA 2 — Tipo de registro e setor                  ║
+// ║  ETAPA 2 (múltiplas datas) — Selecionar data         ║
+// ╚══════════════════════════════════════════════════════╝
+function avancarParaRegistro() {
+  const dataRef = document.getElementById("data-ref").value;
+  const alert   = document.getElementById("data-alert");
+
+  limparAlerta(alert);
+
+  if (!dataRef) {
+    mostrarAlerta(alert, "error", "⚠️ Selecione a data referente.");
+    return;
+  }
+
+  avancarStep(3);
+  document.getElementById("etapa-registro").style.display = "block";
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  ETAPA 3 — Tipo de registro e setor                  ║
 // ╚══════════════════════════════════════════════════════╝
 function atualizarSetores() {
   const registro   = document.getElementById("registro").value;
@@ -590,7 +618,7 @@ function avancarParaJustificativa() {
     return;
   }
 
-  avancarStep(3);
+  avancarStep(totalSteps);
   document.getElementById("etapa-justificativa").style.display = "block";
   document.getElementById("justificativa").focus();
 }
@@ -684,9 +712,10 @@ function limparAlerta(el) {
 }
 
 function avancarStep(n) {
-  [1, 2, 3].forEach(i => {
+  [1, 2, 3, 4].forEach(i => {
     const dot = document.getElementById("dot-" + i);
-    if (i < n)       dot.className = "step-dot done";
+    if (!dot || i > totalSteps) return;
+    if (i < n)        dot.className = "step-dot done";
     else if (i === n) dot.className = "step-dot active";
     else              dot.className = "step-dot";
   });
