@@ -354,8 +354,8 @@
       <h2>Justificativa registrada!</h2>
       <p id="sucesso-detalhe">Sua resposta foi salva com sucesso.</p>
       <div style="margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:10px;">
-        <p style="color:var(--muted);font-size:.9rem;">Deseja registrar outra justificativa?</p>
-        <button class="btn" onclick="responderNovamente()" style="max-width:240px;">Responder novamente</button>
+        <p style="color:var(--muted);font-size:.9rem;">Atualize a página para fazer uma nova justificativa.</p>
+        <button class="btn" onclick="location.reload()" style="max-width:200px;">Atualizar página</button>
       </div>
     </div>
   </div>
@@ -701,42 +701,6 @@ async function enviarFormulario() {
     btn.disabled  = false;
     btn.innerHTML = "Enviar justificativa";
   }
-}
-
-// ╔══════════════════════════════════════════════════════╗
-// ║  Responder novamente                                 ║
-// ╚══════════════════════════════════════════════════════╝
-function responderNovamente() {
-  // Limpa campos das etapas posteriores
-  document.getElementById("registro").value = "";
-  document.getElementById("setor").value = "";
-  document.getElementById("campo-setor").style.display = "none";
-  document.getElementById("justificativa").value = "";
-
-  // Limpa alertas
-  limparAlerta(document.getElementById("cpf-alert"));
-  limparAlerta(document.getElementById("registro-alert"));
-  limparAlerta(document.getElementById("envio-alert"));
-
-  // Reseta seletor de data se houver múltiplas datas
-  if (totalSteps === 4) {
-    document.getElementById("data-ref").selectedIndex = 0;
-    limparAlerta(document.getElementById("data-alert"));
-  }
-
-  // Esconde etapas intermediárias
-  document.getElementById("etapa-data").style.display = "none";
-  document.getElementById("etapa-registro").style.display = "none";
-  document.getElementById("etapa-justificativa").style.display = "none";
-
-  // Mantém badge do gestor visível (CPF já identificado)
-  document.getElementById("gestor-badge").style.display = "block";
-
-  // Volta ao passo 1 e reinicia o timer
-  avancarStep(1);
-  iniciarTimer();
-
-  mostrarTela("form");
 }
 
 // ╔══════════════════════════════════════════════════════╗
