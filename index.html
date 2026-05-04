@@ -439,8 +439,15 @@ function gerarPeriodo(inicio, fim) {
     return;
   }
 
-  // Monta lista de datas do período
-  const datas = gerarPeriodo(data, fimPeriodo);
+  // Monta lista de datas selecionáveis:
+  // quando data_fim existe (= hoje), exclui-o — só será selecionável amanhã
+  const fimSelecao = (() => {
+    if (!dataFim || !/^\d{4}-\d{2}-\d{2}$/.test(dataFim)) return fimPeriodo;
+    const d = new Date(fimPeriodo + "T12:00:00");
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const datas = gerarPeriodo(data, fimSelecao);
   estado.datasDisponiveis = datas;
   estado.dataFormulario   = data;
   estado.dataExpiracao    = expiracao;
@@ -470,7 +477,7 @@ function gerarPeriodo(inicio, fim) {
       `Referente ao dia anterior (${formatarData(data)}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
   } else {
     document.getElementById("subtitulo-data").textContent =
-      `Período: ${formatarData(data)} a ${formatarData(fimPeriodo)}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
+      `Período: ${formatarData(data)} a ${formatarData(fimSelecao)}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
   }
 
   iniciarTimer();
