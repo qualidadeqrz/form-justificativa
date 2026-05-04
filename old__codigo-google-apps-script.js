@@ -1,8 +1,7 @@
 const ABA_GESTORES = "Gestores";
-const COL_NOME  = 1; // A = Nome
-const COL_CPF   = 2; // B = CPF
-const COL_CARGO = 3; // C = Cargo
-const COL_LOJA  = 4; // D = Loja
+const COL_NOME = 1;
+const COL_CPF  = 2;
+const COL_LOJA = 3;
 
 function doGet(e) {
   return handleRequest(e);
@@ -27,7 +26,8 @@ function handleRequest(e) {
     if (action === "validarCPF") {
       result = validarCPF(params.cpf);
     } else if (action === "salvarResposta") {
-      result = salvarResposta(params);
+      const body = e.postData ? JSON.parse(e.postData.contents) : params;
+      result = salvarResposta(body);
     } else {
       result = { ok: false, erro: "Ação inválida." };
     }
@@ -58,11 +58,10 @@ function validarCPF(cpfRaw) {
     const cpfPlanilha = String(dados[i][COL_CPF - 1]).replace(/\D/g, "");
     if (cpfPlanilha === cpf) {
       return {
-        ok:    true,
-        nome:  dados[i][COL_NOME  - 1],
-        cpf:   cpfPlanilha,
-        cargo: dados[i][COL_CARGO - 1],
-        loja:  dados[i][COL_LOJA  - 1]
+        ok:   true,
+        nome: dados[i][COL_NOME - 1],
+        cpf:  cpfPlanilha,
+        loja: dados[i][COL_LOJA - 1]
       };
     }
   }
@@ -71,30 +70,30 @@ function validarCPF(cpfRaw) {
 }
 
 function salvarResposta(dados) {
-  const { cpf, nome, cargo, loja, data_referente, data_resposta, horario, registro, setor, justificativa } = dados;
+  const { cpf, nome, loja, data, registro, setor, justificativa, horario } = dados;
 
-  if (!cpf || !data_referente || !registro || !setor || !justificativa) {
+  if (!cpf || !data || !registro || !setor || !justificativa) {
     return { ok: false, erro: "Dados incompletos para salvar." };
   }
 
   const ss      = SpreadsheetApp.getActiveSpreadsheet();
-  // Aba nomeada pela data referente (ex: Respostas_2026-04-30)
-  const nomeAba = "Respostas_" + data_referente;
+  const nomeAba = "Respostas_" + data; // ex: Respostas_2026-04-29
   let aba       = ss.getSheetByName(nomeAba);
 
   if (!aba) {
     aba = ss.insertSheet(nomeAba);
+    
     aba.appendRow([
-      "Loja", "Registro", "Setor", "Data Referente", "Data da Resposta", "Horário da Resposta", "Nome", "Cargo", "Justificativa"
+      "Data", "Horário", "CPF", "Nome", "Loja", "Registro", "Setor", "Justificativa"
     ]);
-    const header = aba.getRange(1, 1, 1, 9);
+    const header = aba.getRange(1, 1, 1, 8);
     header.setFontWeight("bold");
     header.setBackground("#1e3a5f");
     header.setFontColor("#ffffff");
     aba.setFrozenRows(1);
   }
 
-  aba.appendRow([loja, registro, setor, data_referente, data_resposta, horario, nome, cargo || "", justificativa]);
+  aba.appendRow([data, horario, cpf, nome, loja, registro, setor, justificativa]);
 
   return { ok: true, mensagem: "Resposta salva com sucesso." };
 }

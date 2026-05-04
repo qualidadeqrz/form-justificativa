@@ -271,14 +271,6 @@
       <span id="timer-texto">Calculando...</span>
     </div>
 
-    <!-- Seletor de data referente (visível quando há múltiplas datas) -->
-    <div class="field" id="campo-data-ref" style="display:none">
-      <label for="data-ref">Data referente <span class="req">*</span></label>
-      <select id="data-ref">
-        <option value="">Selecione a data...</option>
-      </select>
-    </div>
-
     <!-- Indicador de etapas -->
     <div class="steps">
       <div class="step-dot active"  id="dot-1"></div>
@@ -368,51 +360,28 @@ const SETORES = {
 // ║  Estado da aplicação                                 ║
 // ╚══════════════════════════════════════════════════════╝
 let estado = {
-  dataFormulario: null,   // data da URL (?data=)
-  dataExpiracao:  null,   // objeto Date (inicio + 24h)
-  datasDisponiveis: [],   // lista de datas do período
-  gestor: null,           // { nome, cpf, cargo, loja }
+  dataFormulario: null,   // "2026-04-29"
+  dataExpiracao:  null,   // objeto Date (dataFormulario + 24h)
+  gestor: null,           // { nome, cpf, loja }
   intervaloTimer: null
 };
 
 // ╔══════════════════════════════════════════════════════╗
 // ║  Inicialização                                       ║
 // ╚══════════════════════════════════════════════════════╝
-// Formata "2026-04-30" → "30/04/2026"
-function formatarData(iso) {
-  const [a, m, d] = iso.split("-");
-  return `${d}/${m}/${a}`;
-}
-
-// Gera lista de datas entre data_inicio e data_fim (inclusive)
-function gerarPeriodo(inicio, fim) {
-  const datas = [];
-  const cur = new Date(inicio + "T12:00:00");
-  const end = new Date(fim   + "T12:00:00");
-  while (cur <= end) {
-    const iso = cur.toISOString().slice(0, 10);
-    datas.push(iso);
-    cur.setDate(cur.getDate() + 1);
-  }
-  return datas;
-}
-
 (function init() {
-  const params   = new URLSearchParams(window.location.search);
-  const data     = params.get("data");      // data de início / única data
-  const dataFim  = params.get("data_fim");  // opcional: data de fim do período
+  const params = new URLSearchParams(window.location.search);
+  const data   = params.get("data"); // "2026-04-29"
 
-  // Valida parâmetro obrigatório
+  // Valida parâmetro de data
   if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
     mostrarTela("invalido");
     return;
   }
 
-  // Calcula janela de acesso: das 08h30 do dia "data" até 08h30 do dia seguinte ao "data_fim"
-  const fimPeriodo = (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) ? dataFim : data;
-  const [afim, mfim, dfim] = fimPeriodo.split("-").map(Number);
-  const inicio    = new Date(data.split("-")[0], data.split("-")[1]-1, data.split("-")[2], 8, 30, 0);
-  const expiracao = new Date(afim, mfim-1, dfim+1, 8, 30, 0); // 08h30 do dia seguinte ao fim
+  // Calcula janela: das 08h30 do dia informado até 08h30 do dia seguinte
+  const inicio    = new Date(data + "T14:00:00");
+  const expiracao = new Date(inicio.getTime() + 24 * 60 * 60 * 1000);
   const agora     = new Date();
 
   if (agora >= expiracao) {
@@ -425,41 +394,15 @@ function gerarPeriodo(inicio, fim) {
     return;
   }
 
-  // Monta lista de datas do período
-  const datas = gerarPeriodo(data, fimPeriodo);
-  estado.datasDisponiveis = datas;
-  estado.dataFormulario   = data;
-  estado.dataExpiracao    = expiracao;
+  estado.dataFormulario = data;
+  estado.dataExpiracao  = expiracao;
 
-  // Preenche o seletor de data referente
-  const selectDataRef = document.getElementById("data-ref");
-  const campoDataRef  = document.getElementById("campo-data-ref");
+  // Atualiza subtítulo — referente ao dia ANTERIOR
+  const [ano, mes, dia] = data.split("-");
+  document.getElementById("subtitulo-data").textContent =
+    `Referente ao dia anterior (${dia}/${mes}/${ano}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia seguinte.`;
 
-  if (datas.length === 1) {
-    // Apenas uma data — pré-seleciona e esconde o campo
-    selectDataRef.innerHTML = `<option value="${datas[0]}" selected>${formatarData(datas[0])}</option>`;
-    campoDataRef.style.display = "none";
-  } else {
-    // Múltiplas datas — mostra o seletor
-    selectDataRef.innerHTML = '<option value="">Selecione a data...</option>';
-    datas.forEach(d => {
-      const opt = document.createElement("option");
-      opt.value = d;
-      opt.textContent = formatarData(d);
-      selectDataRef.appendChild(opt);
-    });
-    campoDataRef.style.display = "flex";
-  }
-
-  // Atualiza subtítulo
-  if (datas.length === 1) {
-    document.getElementById("subtitulo-data").textContent =
-      `Referente ao dia anterior (${formatarData(data)}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
-  } else {
-    document.getElementById("subtitulo-data").textContent =
-      `Período: ${formatarData(data)} a ${formatarData(fimPeriodo)}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
-  }
-
+  // Inicia contador
   iniciarTimer();
   mostrarTela("form");
 })();
@@ -616,27 +559,16 @@ async function enviarFormulario() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Enviando...';
 
-  // Valida seleção de data referente
-  const dataRef = document.getElementById("data-ref").value;
-  if (!dataRef) {
-    mostrarAlerta(alert, "error", "⚠️ Selecione a data referente antes de enviar.");
-    btn.disabled  = false;
-    btn.innerHTML = "Enviar justificativa";
-    return;
-  }
-
-  const agora = new Date();
   const payload = {
-    cpf:            estado.gestor.cpf,
-    nome:           estado.gestor.nome,
-    cargo:          estado.gestor.cargo || "",
-    loja:           estado.gestor.loja,
-    data_referente: dataRef,
-    data_resposta:  agora.toLocaleDateString("pt-BR"),
-    horario:        agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"}),
-    registro:       document.getElementById("registro").value,
-    setor:          document.getElementById("setor").value,
-    justificativa:  justificativa
+    cpf:           estado.gestor.cpf,
+    nome:          estado.gestor.nome,
+    cargo:         estado.gestor.cargo,
+    loja:          estado.gestor.loja,
+    data:          estado.dataFormulario,
+    horario:       new Date().toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"}),
+    registro:      document.getElementById("registro").value,
+    setor:         document.getElementById("setor").value,
+    justificativa: justificativa
   };
 
   try {
