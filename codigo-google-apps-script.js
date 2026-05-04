@@ -94,7 +94,10 @@ function salvarResposta(dados) {
     aba.setFrozenRows(1);
   }
 
-  aba.appendRow([loja, registro, setor, data_referente, data_resposta, horario, nome, cargo || "", justificativa]);
+  const [a, m, d] = data_referente.split("-");
+  const dataRefFormatada = `${d}/${m}/${a}`;
+
+  aba.appendRow([loja, registro, setor, dataRefFormatada, data_resposta, horario, nome, cargo || "", justificativa]);
 
   return { ok: true, mensagem: "Resposta salva com sucesso." };
 }
