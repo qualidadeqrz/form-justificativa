@@ -426,7 +426,7 @@ function gerarPeriodo(inicio, fim) {
   const fimPeriodo = (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) ? dataFim : data;
   const [afim, mfim, dfim] = fimPeriodo.split("-").map(Number);
   const inicio    = new Date(data.split("-")[0], data.split("-")[1]-1, data.split("-")[2], hr, min, 0);
-  const expiracao = new Date(afim, mfim-1, dfim+1, hr, min, 0); // 08h30 do dia seguinte ao fim
+  const expiracao = new Date(afim, mfim-1, dfim+2, hr, min, 0); // 14h dois dias após o fim (dia do envio + 1)
   const agora     = new Date();
 
   if (agora >= expiracao) {
@@ -474,10 +474,10 @@ function gerarPeriodo(inicio, fim) {
   // Atualiza subtítulo
   if (datas.length === 1) {
     document.getElementById("subtitulo-data").textContent =
-      `Referente ao dia anterior (${formatarData(data)}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
+      `Referente ao dia anterior (${formatarData(data)}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia ${formatarData(expiracao)}.`;
   } else {
     document.getElementById("subtitulo-data").textContent =
-      `Período: ${formatarData(data)} a ${formatarData(fimSelecao)}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h.`;
+      `Período: ${formatarData(data)} a ${formatarData(fimSelecao)}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia ${formatarData(expiracao)}.`;
   }
 
   iniciarTimer();
