@@ -260,7 +260,7 @@
   <!-- ══════════════════════════════════════════
        TELA: Formulário principal
   ══════════════════════════════════════════ -->
-  <div class="card" id="tela-form" style="display:none">
+  <div class="card" id="tela-form">
 
     <div class="card-title">Justificativa de Não Conformidade</div>
     <p class="card-sub" id="subtitulo-data">Preencha todos os campos abaixo.</p>
@@ -472,12 +472,14 @@ function gerarPeriodo(inicio, fim) {
   }
 
   // Atualiza subtítulo
+  const expiracaoFormatada = expiracao.toLocaleDateString("pt-BR");
+  const expiracaoHora = expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
   if (datas.length === 1) {
     document.getElementById("subtitulo-data").textContent =
-      `Referente ao dia anterior (${formatarData(data)}). Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia ${formatarData(expiracao)}.`;
+      `Referente ao dia anterior (${formatarData(data)}). Prazo: até ${expiracaoHora}h do dia ${expiracaoFormatada}.`;
   } else {
     document.getElementById("subtitulo-data").textContent =
-      `Período: ${formatarData(data)} a ${formatarData(fimSelecao)}. Prazo: até ${expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"})}h do dia ${formatarData(expiracao)}.`;
+      `Período: ${formatarData(data)} a ${formatarData(fimSelecao)}. Prazo: até ${expiracaoHora}h do dia ${expiracaoFormatada}.`;
   }
 
   iniciarTimer();
