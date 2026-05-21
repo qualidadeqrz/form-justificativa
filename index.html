@@ -618,6 +618,11 @@ async function verificarCPF() {
       document.getElementById("gestor-loja").textContent = `${json.cargo} — ${json.loja}`;
       badge.style.display = "block";
 
+      // Mostra o botão imediatamente; o painel é preenchido em background
+      const btnToggle = document.getElementById("btn-toggle-registros");
+      const listaPreload = document.getElementById("registros-lista");
+      listaPreload.innerHTML = '<li style="color:var(--muted);font-style:italic;border:none;background:none;padding:4px 0">Carregando...</li>';
+      btnToggle.style.display = "block";
       buscarRegistros(json.cpf);
 
       // Avança para próxima etapa
@@ -640,15 +645,14 @@ async function verificarCPF() {
 
 // Buscar registros já feitos pelo gestor hoje
 async function buscarRegistros(cpf) {
-  const btnToggle = document.getElementById("btn-toggle-registros");
-  const lista     = document.getElementById("registros-lista");
-  lista.innerHTML = "";
+  const lista = document.getElementById("registros-lista");
 
   try {
     const data = estado.dataFormulario;
     const url  = `${API_URL}?action=buscarRegistros&cpf=${encodeURIComponent(cpf)}&data=${encodeURIComponent(data)}`;
     const resp = await fetch(url);
     const json = await resp.json();
+    lista.innerHTML = "";
 
     if (json.ok && Array.isArray(json.registros) && json.registros.length > 0) {
       json.registros.forEach((r, i) => {
@@ -671,8 +675,6 @@ async function buscarRegistros(cpf) {
     li.textContent = "Nenhum registro feito nesta data.";
     lista.appendChild(li);
   }
-
-  btnToggle.style.display = "block";
 }
 
 function toggleRegistros() {
