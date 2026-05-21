@@ -211,6 +211,45 @@
     .step-dot.active   { background: var(--primary-light); }
     .step-dot.done     { background: var(--primary); }
 
+    /* ── Painel de registros já feitos ── */
+    .registros-hoje {
+      background: #f8faff;
+      border: 1px solid #c7d9f9;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-top: 10px;
+      font-size: .84rem;
+    }
+    .registros-hoje-titulo {
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 10px;
+      font-size: .875rem;
+    }
+    .registros-lista {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .registros-lista li {
+      background: white;
+      border: 1px solid #dde7fa;
+      border-radius: 6px;
+      padding: 10px 12px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .registros-lista li strong { color: var(--primary); }
+    .registros-lista .reg-justificativa {
+      color: var(--muted);
+      font-size: .82rem;
+      margin-top: 2px;
+      display: block;
+    }
+
     /* Spinner */
     .spinner {
       display: inline-block;
@@ -258,6 +297,17 @@
   </div>
 
   <!-- ══════════════════════════════════════════
+       TELA: Ainda não disponível
+  ══════════════════════════════════════════ -->
+  <div class="card" id="tela-cedo" style="display:none">
+    <div class="full-screen show">
+      <div class="icon">🕐</div>
+      <h2>Ainda não disponível</h2>
+      <p id="tela-cedo-msg">O formulário estará disponível a partir das 14h de hoje.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
        TELA: Formulário principal
   ══════════════════════════════════════════ -->
   <div class="card" id="tela-form">
@@ -287,6 +337,10 @@
       </div>
       <div class="gestor-badge" id="gestor-badge">
         ✅ Identificado: <strong id="gestor-nome"></strong> — <span id="gestor-loja"></span>
+      </div>
+      <div class="registros-hoje" id="registros-hoje" style="display:none">
+        <div class="registros-hoje-titulo">📋 Registros feitos hoje:</div>
+        <ol class="registros-lista" id="registros-lista"></ol>
       </div>
       <div class="alert" id="cpf-alert"></div>
       <button class="btn" id="btn-cpf" onclick="verificarCPF()">Verificar CPF</button>
@@ -425,8 +479,8 @@ function gerarPeriodo(inicio, fim) {
   // Calcula janela de acesso: das 14h do dia "data" até 14h do dia seguinte ao "data_fim"
   const fimPeriodo = (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) ? dataFim : data;
   const [afim, mfim, dfim] = fimPeriodo.split("-").map(Number);
-  const inicio    = new Date(data.split("-")[0], data.split("-")[1]-1, data.split("-")[2], hr, min, 0);
-  const expiracao = new Date(afim, mfim-1, dfim+1, hr, min, 0); // 14h do dia seguinte ao envio (data_fim + 1)
+  const inicio    = new Date(afim, mfim-1, dfim, hr, min, 0);        // 14h do último dia do período (data_fim)
+  const expiracao = new Date(afim, mfim-1, dfim+1, hr, min, 0);      // 14h do dia seguinte
   const agora     = new Date();
 
   if (agora >= expiracao) {
@@ -435,7 +489,11 @@ function gerarPeriodo(inicio, fim) {
   }
 
   if (agora < inicio) {
-    mostrarTela("invalido");
+    const inicioFormatado = inicio.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+    const inicioData      = inicio.toLocaleDateString("pt-BR");
+    document.getElementById("tela-cedo-msg").textContent =
+      `O formulário estará disponível a partir das ${inicioFormatado}h do dia ${inicioData}.`;
+    mostrarTela("cedo");
     return;
   }
 
@@ -474,9 +532,12 @@ function gerarPeriodo(inicio, fim) {
   // Atualiza subtítulo
   const expiracaoFormatada = expiracao.toLocaleDateString("pt-BR");
   const expiracaoHora = expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
+  const _dAnterior = new Date(data + "T12:00:00");
+  _dAnterior.setDate(_dAnterior.getDate() - 1);
+  const dataAnteriorISO = _dAnterior.toISOString().slice(0, 10);
   if (datas.length === 1) {
     document.getElementById("subtitulo-data").textContent =
-      `Referente ao dia anterior (${formatarData(data)}). Prazo: até ${expiracaoHora}h do dia ${expiracaoFormatada}.`;
+      `Referente ao dia anterior (${formatarData(dataAnteriorISO)}). Prazo: até ${expiracaoHora}h do dia ${expiracaoFormatada}.`;
   } else {
     document.getElementById("subtitulo-data").textContent =
       `Período: ${formatarData(data)} a ${formatarData(fimSelecao)}. Prazo: até ${expiracaoHora}h do dia ${expiracaoFormatada}.`;
@@ -555,6 +616,8 @@ async function verificarCPF() {
       document.getElementById("gestor-loja").textContent = `${json.cargo} — ${json.loja}`;
       badge.style.display = "block";
 
+      buscarRegistros(json.cpf);
+
       // Avança para próxima etapa
       avancarStep(2);
       if (totalSteps === 4) {
@@ -570,6 +633,38 @@ async function verificarCPF() {
   } finally {
     btn.disabled  = false;
     btn.innerHTML = "Verificar CPF";
+  }
+}
+
+// ╔══════════════════════════════════════════════════════╗
+// ║  Buscar registros já feitos pelo gestor hoje         ║
+// ╚══════════════════════════════════════════════════════╝
+async function buscarRegistros(cpf) {
+  const painel = document.getElementById("registros-hoje");
+  const lista  = document.getElementById("registros-lista");
+  painel.style.display = "none";
+  lista.innerHTML = "";
+
+  try {
+    const data = estado.dataFormulario;
+    const url  = `${API_URL}?action=buscarRegistros&cpf=${encodeURIComponent(cpf)}&data=${encodeURIComponent(data)}`;
+    const resp = await fetch(url);
+    const json = await resp.json();
+
+    if (!json.ok || !Array.isArray(json.registros) || json.registros.length === 0) return;
+
+    json.registros.forEach((r, i) => {
+      const li = document.createElement("li");
+      li.innerHTML =
+        `<strong>${i + 1}. Tipo de registro:</strong> ${r.registro}<br>` +
+        `<strong>Setor:</strong> ${r.setor}<br>` +
+        `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span>`;
+      lista.appendChild(li);
+    });
+
+    painel.style.display = "block";
+  } catch (_) {
+    // degradação silenciosa — o painel simplesmente não aparece
   }
 }
 
@@ -709,7 +804,7 @@ async function enviarFormulario() {
 // ║  Utilitários de UI                                   ║
 // ╚══════════════════════════════════════════════════════╝
 function mostrarTela(nome) {
-  ["form", "expirado", "invalido", "sucesso"].forEach(t => {
+  ["form", "expirado", "invalido", "cedo", "sucesso"].forEach(t => {
     document.getElementById("tela-" + t).style.display = (t === nome) ? "block" : "none";
   });
 }
