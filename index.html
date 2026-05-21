@@ -474,13 +474,13 @@ function gerarPeriodo(inicio, fim) {
   }
 
   const hr = 14
-  const min = 0
+  const min = 30
 
   // Calcula janela de acesso: das 14h do dia "data" até 14h do dia seguinte ao "data_fim"
   const fimPeriodo = (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) ? dataFim : data;
   const [afim, mfim, dfim] = fimPeriodo.split("-").map(Number);
-  const inicio    = new Date(afim, mfim-1, dfim, hr, min, 0);        // 14h do último dia do período (data_fim)
-  const expiracao = new Date(afim, mfim-1, dfim+1, hr, min, 0);      // 14h do dia seguinte
+  const inicio    = new Date(afim, mfim-1, dfim, hr, min, 0);        // 14h30 do último dia do período (data_fim)
+  const expiracao = new Date(afim, mfim-1, dfim+1, hr, min, 0);      // 14h30 do dia seguinte
   const agora     = new Date();
 
   if (agora >= expiracao) {
@@ -656,7 +656,7 @@ async function buscarRegistros(cpf) {
     json.registros.forEach((r, i) => {
       const li = document.createElement("li");
       li.innerHTML =
-        `<strong>${i + 1}. Tipo de registro:</strong> ${r.registro}<br>` +
+        `<strong>Tipo de registro:</strong> ${r.registro}<br>` +
         `<strong>Setor:</strong> ${r.setor}<br>` +
         `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span>`;
       lista.appendChild(li);
