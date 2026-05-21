@@ -211,6 +211,26 @@
     .step-dot.active   { background: var(--primary-light); }
     .step-dot.done     { background: var(--primary); }
 
+    /* ── Botão toggle de registros ── */
+    .btn-registros {
+      width: 100%;
+      padding: 9px 14px;
+      background: white;
+      color: var(--primary);
+      font-size: .875rem;
+      font-weight: 600;
+      border: 1.5px solid #c7d9f9;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      margin-top: 10px;
+      text-align: left;
+      display: none;
+    }
+    .btn-registros:hover { background: var(--accent); border-color: var(--primary-light); }
+    .btn-registros .chevron { float: right; transition: transform .2s; }
+    .btn-registros.aberto .chevron { transform: rotate(180deg); }
+
     /* ── Painel de registros já feitos ── */
     .registros-hoje {
       background: #f8faff;
@@ -274,9 +294,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       TELA: Link Expirado
-  ══════════════════════════════════════════ -->
+  <!-- TELA: Link Expirado -->
   <div class="card" id="tela-expirado" style="display:none">
     <div class="full-screen show">
       <div class="icon">⏰</div>
@@ -285,9 +303,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       TELA: Data inválida (sem parâmetro)
-  ══════════════════════════════════════════ -->
+  <!-- TELA: Data inválida (sem parâmetro) -->
   <div class="card" id="tela-invalido" style="display:none">
     <div class="full-screen show">
       <div class="icon">🔗</div>
@@ -296,9 +312,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       TELA: Ainda não disponível
-  ══════════════════════════════════════════ -->
+  <!-- TELA: Ainda não disponível -->
   <div class="card" id="tela-cedo" style="display:none">
     <div class="full-screen show">
       <div class="icon">🕐</div>
@@ -307,9 +321,7 @@
     </div>
   </div>
 
-  <!-- ══════════════════════════════════════════
-       TELA: Formulário principal
-  ══════════════════════════════════════════ -->
+  <!-- TELA: Formulário principal -->
   <div class="card" id="tela-form">
 
     <div class="card-title">Justificativa de Não Conformidade</div>
@@ -338,8 +350,11 @@
       <div class="gestor-badge" id="gestor-badge">
         ✅ Identificado: <strong id="gestor-nome"></strong> — <span id="gestor-loja"></span>
       </div>
+      <button class="btn-registros" id="btn-toggle-registros" onclick="toggleRegistros()">
+        📋 <span id="btn-registros-texto">Ver registros de hoje</span> <span class="chevron">▼</span>
+      </button>
       <div class="registros-hoje" id="registros-hoje" style="display:none">
-        <div class="registros-hoje-titulo">📋 Registros feitos hoje:</div>
+        <div class="registros-hoje-titulo">Registros feitos hoje:</div>
         <ol class="registros-lista" id="registros-lista"></ol>
       </div>
       <div class="alert" id="cpf-alert"></div>
@@ -399,9 +414,7 @@
 
   </div>
 
-  <!-- ══════════════════════════════════════════
-       TELA: Envio confirmado
-  ══════════════════════════════════════════ -->
+  <!-- TELA: Envio confirmado -->
   <div class="card" id="tela-sucesso" style="display:none">
     <div class="full-screen show">
       <div class="icon">✅</div>
@@ -416,9 +429,8 @@
 
 
 <script>
-// ╔══════════════════════════════════════════════════════╗
-// ║  ⚙️  CONFIGURAÇÃO — altere apenas esta seção         ║
-// ╚══════════════════════════════════════════════════════╝
+
+// CONFIGURAÇÃO — altere apenas esta seção
 const API_URL = "https://script.google.com/macros/s/AKfycby0OPdq3r6ktEM0mwd7-REzFipKVoIUGJ7a0xcv5P1Zm0cMRyo76kaurk8HKBHYpOX6CA/exec";
 
 // Setores por tipo de registro
@@ -428,9 +440,7 @@ const SETORES = {
   "Relatórios - Moki":["Padaria", "Açougue", "Hortifruti", "Frios", "Gestores"]
 };
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  Estado da aplicação                                 ║
-// ╚══════════════════════════════════════════════════════╝
+// Estado da aplicação
 let totalSteps = 3;
 let estado = {
   dataFormulario: null,   // data da URL (?data=)
@@ -440,9 +450,7 @@ let estado = {
   intervaloTimer: null
 };
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  Inicialização                                       ║
-// ╚══════════════════════════════════════════════════════╝
+// Inicialização
 // Formata "2026-04-30" → "30/04/2026"
 function formatarData(iso) {
   const [a, m, d] = iso.split("-");
@@ -547,9 +555,7 @@ function gerarPeriodo(inicio, fim) {
   mostrarTela("form");
 })();
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  Timer                                               ║
-// ╚══════════════════════════════════════════════════════╝
+// Timer
 function iniciarTimer() {
   function atualizar() {
     const restante = estado.dataExpiracao - new Date();
@@ -569,9 +575,7 @@ function iniciarTimer() {
   estado.intervaloTimer = setInterval(atualizar, 1000);
 }
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  Máscara de CPF                                      ║
-// ╚══════════════════════════════════════════════════════╝
+// Máscara de CPF
 document.getElementById("cpf").addEventListener("input", function() {
   let v = this.value.replace(/\D/g, "").slice(0, 11);
   if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
@@ -584,9 +588,7 @@ document.getElementById("cpf").addEventListener("keydown", function(e) {
   if (e.key === "Enter") verificarCPF();
 });
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  ETAPA 1 — Verificar CPF                             ║
-// ╚══════════════════════════════════════════════════════╝
+// ETAPA 1 — Verificar CPF
 async function verificarCPF() {
   const cpf    = document.getElementById("cpf").value.trim();
   const alert  = document.getElementById("cpf-alert");
@@ -636,13 +638,10 @@ async function verificarCPF() {
   }
 }
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  Buscar registros já feitos pelo gestor hoje         ║
-// ╚══════════════════════════════════════════════════════╝
+// Buscar registros já feitos pelo gestor hoje
 async function buscarRegistros(cpf) {
-  const painel = document.getElementById("registros-hoje");
-  const lista  = document.getElementById("registros-lista");
-  painel.style.display = "none";
+  const btnToggle = document.getElementById("btn-toggle-registros");
+  const lista     = document.getElementById("registros-lista");
   lista.innerHTML = "";
 
   try {
@@ -651,26 +650,45 @@ async function buscarRegistros(cpf) {
     const resp = await fetch(url);
     const json = await resp.json();
 
-    if (!json.ok || !Array.isArray(json.registros) || json.registros.length === 0) return;
-
-    json.registros.forEach((r, i) => {
+    if (json.ok && Array.isArray(json.registros) && json.registros.length > 0) {
+      json.registros.forEach((r, i) => {
+        const li = document.createElement("li");
+        li.innerHTML =
+          `<strong>${i + 1}. Tipo de registro:</strong> ${r.registro}<br>` +
+          `<strong>Setor:</strong> ${r.setor}<br>` +
+          `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span>`;
+        lista.appendChild(li);
+      });
+    } else {
       const li = document.createElement("li");
-      li.innerHTML =
-        `<strong>Tipo de registro:</strong> ${r.registro}<br>` +
-        `<strong>Setor:</strong> ${r.setor}<br>` +
-        `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span>`;
+      li.style.cssText = "color:var(--muted);font-style:italic;border:none;background:none;padding:4px 0";
+      li.textContent = "Nenhum registro feito nesta data.";
       lista.appendChild(li);
-    });
-
-    painel.style.display = "block";
+    }
   } catch (_) {
-    // degradação silenciosa — o painel simplesmente não aparece
+    const li = document.createElement("li");
+    li.style.cssText = "color:var(--muted);font-style:italic;border:none;background:none;padding:4px 0";
+    li.textContent = "Nenhum registro feito nesta data.";
+    lista.appendChild(li);
   }
+
+  btnToggle.style.display = "block";
 }
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  ETAPA 2 (múltiplas datas) — Selecionar data         ║
-// ╚══════════════════════════════════════════════════════╝
+function toggleRegistros() {
+  const painel  = document.getElementById("registros-hoje");
+  const btn     = document.getElementById("btn-toggle-registros");
+  const texto   = document.getElementById("btn-registros-texto");
+  const chevron = btn.querySelector(".chevron");
+  const aberto  = painel.style.display !== "none";
+
+  painel.style.display   = aberto ? "none" : "block";
+  btn.classList.toggle("aberto", !aberto);
+  chevron.textContent    = aberto ? "▼" : "▲";
+  texto.textContent      = aberto ? "Ver registros de hoje" : "Ocultar registros";
+}
+
+// ETAPA 2 (múltiplas datas) — Selecionar data
 function avancarParaRegistro() {
   const dataRef = document.getElementById("data-ref").value;
   const alert   = document.getElementById("data-alert");
@@ -686,9 +704,7 @@ function avancarParaRegistro() {
   document.getElementById("etapa-registro").style.display = "block";
 }
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  ETAPA 3 — Tipo de registro e setor                  ║
-// ╚══════════════════════════════════════════════════════╝
+// ETAPA 3 — Tipo de registro e setor
 function atualizarSetores() {
   const registro   = document.getElementById("registro").value;
   const campoSetor = document.getElementById("campo-setor");
@@ -731,9 +747,7 @@ function avancarParaJustificativa() {
   document.getElementById("justificativa").focus();
 }
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  ETAPA 3 — Enviar formulário                         ║
-// ╚══════════════════════════════════════════════════════╝
+// ETAPA 3 — Enviar formulário
 async function enviarFormulario() {
   const justificativa = document.getElementById("justificativa").value.trim();
   const alert         = document.getElementById("envio-alert");
@@ -800,9 +814,7 @@ async function enviarFormulario() {
   }
 }
 
-// ╔══════════════════════════════════════════════════════╗
-// ║  Utilitários de UI                                   ║
-// ╚══════════════════════════════════════════════════════╝
+// Utilitários de UI
 function mostrarTela(nome) {
   ["form", "expirado", "invalido", "cedo", "sucesso"].forEach(t => {
     document.getElementById("tela-" + t).style.display = (t === nome) ? "block" : "none";
