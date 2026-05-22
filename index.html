@@ -522,8 +522,8 @@ function gerarPeriodo(inicio, fim) {
   const selectDataRef = document.getElementById("data-ref");
 
   if (datas.length === 1) {
-    // Apenas uma data — pré-seleciona (etapa-data ficará oculta)
-    selectDataRef.innerHTML = `<option value="${datas[0]}" selected>${formatarData(datas[0])}</option>`;
+    // Apenas uma data — pré-seleciona com a data de REFERÊNCIA (dia anterior ao parâmetro da URL)
+    selectDataRef.innerHTML = `<option value="${dataAnteriorISO}" selected>${formatarData(dataAnteriorISO)}</option>`;
   } else {
     // Múltiplas datas — etapa extra de seleção após CPF
     selectDataRef.innerHTML = '<option value="">Selecione a data...</option>';
@@ -648,7 +648,7 @@ async function buscarRegistros(cpf) {
   const lista = document.getElementById("registros-lista");
 
   try {
-    const data = estado.dataFormulario;
+    const data = document.getElementById("data-ref").value || estado.dataFormulario;
     const url  = `${API_URL}?action=buscarRegistros&cpf=${encodeURIComponent(cpf)}&data=${encodeURIComponent(data)}`;
     const resp = await fetch(url);
     const json = await resp.json();
@@ -658,7 +658,7 @@ async function buscarRegistros(cpf) {
       json.registros.forEach((r, i) => {
         const li = document.createElement("li");
         li.innerHTML =
-          `<strong>${i + 1}. Tipo de registro:</strong> ${r.registro}<br>` +
+          `<strong>Tipo de registro:</strong> ${r.registro}<br>` +
           `<strong>Setor:</strong> ${r.setor}<br>` +
           `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span>`;
         lista.appendChild(li);
