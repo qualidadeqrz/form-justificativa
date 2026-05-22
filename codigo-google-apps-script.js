@@ -4,6 +4,10 @@ const COL_CPF   = 2; // B = CPF
 const COL_CARGO = 3; // C = Cargo
 const COL_LOJA  = 4; // D = Loja
 
+// Script Property que guarda o ID da pasta do Drive com os Excel de referência.
+// Configure via menu "Justificativas → Configurar pasta de referência".
+const PROP_PASTA_ID = "PASTA_REFERENCIA_ID";
+
 function doGet(e) {
   return handleRequest(e);
 }
@@ -127,10 +131,66 @@ function buscarRegistros(cpf, data) {
 }
 
 // ------------------------------------------------------------
+// Lê o Excel de referência do Drive e retorna pares { loja, setor }
+// Espera exatamente um arquivo na pasta configurada em PASTA_REFERENCIA_ID.
+// Estrutura esperada: REGIONAL(A) | LOJA(B) | SETOR(C) | FONTE(D) | DATA(E)
+// ------------------------------------------------------------
+function lerReferenciaDrive() {
+  const pastaId = PropertiesService.getScriptProperties().getProperty(PROP_PASTA_ID);
+  if (!pastaId) {
+    throw new Error(
+      'Script Property "PASTA_REFERENCIA_ID" não configurada.\n' +
+      'Use o menu Justificativas → Configurar pasta de referência.'
+    );
+  }
+
+  const pasta    = DriveApp.getFolderById(pastaId);
+  const arquivos = pasta.getFiles();
+
+  if (!arquivos.hasNext()) {
+    throw new Error("Nenhum arquivo encontrado na pasta do Drive configurada.\nVerifique se o Excel foi enviado para a pasta correta.");
+  }
+
+  let alvo = arquivos.next();
+  while (arquivos.hasNext()) {
+    const proximo = arquivos.next();
+    if (proximo.getLastUpdated() > alvo.getLastUpdated()) alvo = proximo;
+  }
+
+  const ss    = SpreadsheetApp.openById(alvo.getId());
+  const aba   = ss.getSheets()[0];
+  const dados = aba.getDataRange().getValues().slice(1); // pula cabeçalho
+
+  const pares  = [];
+  const vistos = new Set();
+
+  let dataReferencia = "";
+  dados.forEach(row => {
+    const loja  = String(row[1]).trim(); // coluna B
+    const setor = String(row[2]).trim(); // coluna C
+    const fonte = String(row[3]).trim(); // coluna D
+    const data  = row[4];               // coluna E — DATA
+    if (!loja || !setor || !fonte) return;
+    const chave = `${loja}||${setor}||${fonte}`;
+    if (!vistos.has(chave)) {
+      vistos.add(chave);
+      pares.push({ loja, setor, fonte });
+    }
+    if (!dataReferencia && data) {
+      dataReferencia = data instanceof Date
+        ? Utilities.formatDate(data, Session.getScriptTimeZone(), "dd-MM-yyyy")
+        : String(data).replace(/\//g, "-");
+    }
+  });
+
+  return { pares, nomeArquivo: alvo.getName(), dataReferencia };
+}
+
+// ------------------------------------------------------------
 // CONSOLIDAÇÃO
-// Chame pelo menu "📋 Justificativas → Consolidar respostas"
-// Pede a data no formato AAAA-MM-DD, monta o Consolidado_DATA
-// garantindo que todas as lojas apareçam pelo menos uma vez.
+// Chame pelo menu "Justificativas → Consolidar respostas"
+// Lê o Excel de referência do Drive para saber quais pares
+// LOJA+SETOR devem aparecer no consolidado.
 // A aba Respostas_DATA é mantida para backup — apague manualmente.
 // ------------------------------------------------------------
 function consolidar() {
@@ -149,8 +209,18 @@ function consolidar() {
   const data    = recente.replace("Respostas_", "");
   const abaResp = ss.getSheetByName(recente);
 
-  if (!abaResp) {
-    ui.alert(`❌ Aba "${nomeAbaResp}" não encontrada.\n\nVerifique se a data está correta e se há respostas registradas.`);
+  // Lê os pares LOJA+SETOR+FONTE e a data de referência do Excel no Drive
+  let referencia, nomeArquivo, dataConsolidado;
+  try {
+    ({ pares: referencia, nomeArquivo, dataReferencia: dataConsolidado } = lerReferenciaDrive());
+  } catch (err) {
+    ui.alert("❌ Erro ao ler referência do Drive:\n\n" + err.message);
+    return;
+  }
+  if (!dataConsolidado) dataConsolidado = data;
+
+  if (referencia.length === 0) {
+    ui.alert("❌ O arquivo de referência não contém nenhum par LOJA+SETOR válido.");
     return;
   }
 
@@ -158,25 +228,8 @@ function consolidar() {
   // Colunas: Loja | Registro | Setor | Data Referente | Data da Resposta | Horário | Nome | Cargo | Justificativa
   const respostaDados = abaResp.getDataRange().getValues().slice(1);
 
-  // Lê todas as lojas cadastradas (sem duplicatas, mantendo ordem da planilha)
-  const abaGestores   = ss.getSheetByName(ABA_GESTORES);
-  const gestoresDados = abaGestores.getDataRange().getValues().slice(1);
-
-  const lojasVistas = new Set();
-  const lojaOrdem   = [];
-  gestoresDados.forEach(row => {
-    const loja = String(row[COL_LOJA - 1]).trim();
-    if (loja && !lojasVistas.has(loja)) {
-      lojasVistas.add(loja);
-      lojaOrdem.push(loja);
-    }
-  });
-
-  // Lojas que responderam (para identificar ausentes)
-  const lojasQueResponderam = new Set(respostaDados.map(r => String(r[0]).trim()));
-
   // Cria (ou recria) aba consolidada
-  const nomeConsolidado = "Consolidado_" + data;
+  const nomeConsolidado = "Consolidado_" + dataConsolidado;
   const abaExistente    = ss.getSheetByName(nomeConsolidado);
   if (abaExistente) ss.deleteSheet(abaExistente);
 
@@ -192,15 +245,23 @@ function consolidar() {
   cabecalho.setFontColor("#ffffff");
   abaConsolidado.setFrozenRows(1);
 
-  // Para cada loja: insere respostas ou linha de ausência
-  lojaOrdem.forEach(loja => {
-    const linhasDaLoja = respostaDados.filter(r => String(r[0]).trim() === loja);
+  // Para cada par LOJA+SETOR da referência: insere respostas ou linha de ausência
+  let totalRespondidos = 0;
+  let totalAusentes    = 0;
 
-    if (linhasDaLoja.length > 0) {
-      linhasDaLoja.forEach(linha => abaConsolidado.appendRow(linha));
+  referencia.forEach(({ loja, setor, fonte }) => {
+    const linhas = respostaDados.filter(r =>
+      String(r[0]).trim() === loja &&
+      String(r[2]).trim().toLowerCase() === setor.toLowerCase() &&
+      String(r[1]).trim().toLowerCase() === fonte.toLowerCase()
+    );
+
+    if (linhas.length > 0) {
+      linhas.forEach(linha => abaConsolidado.appendRow(linha));
+      totalRespondidos += linhas.length;
     } else {
-      // Linha de ausência — só a loja identificada, restante vazio
-      abaConsolidado.appendRow([loja, "", "", "", "", "", "", "", "AUSENTE - sem justificativa"]);
+      abaConsolidado.appendRow([loja, fonte, setor, dataConsolidado.replace(/-/g, "/"), "", "", "", "", "AUSENTE - sem justificativa"]);
+      totalAusentes++;
     }
   });
 
@@ -208,7 +269,7 @@ function consolidar() {
   const todosValores = abaConsolidado.getDataRange().getValues();
   todosValores.forEach((row, i) => {
     if (i === 0) return;
-    if (row[8] === "AUSENTE – sem justificativa") {
+    if (row[8] === "AUSENTE - sem justificativa") {
       abaConsolidado.getRange(i + 1, 1, 1, 9)
         .setBackground("#fde8e8")
         .setFontColor("#9b1c1c")
@@ -218,16 +279,39 @@ function consolidar() {
 
   abaConsolidado.autoResizeColumns(1, 9);
 
-  // Resumo final
-  const total    = respostaDados.length;
-  const ausentes = lojaOrdem.length - lojasQueResponderam.size;
-
   ui.alert(
-    `✅ Consolidado_${data} criado!\n\n` +
-    `• ${total} justificativa(s) registrada(s)\n` +
-    `• ${ausentes} loja(s) sem resposta (marcadas em vermelho)\n\n` +
+    `✅ Consolidado_${dataConsolidado} criado!\n\n` +
+    `• Referência: ${nomeArquivo}\n` +
+    `• ${referencia.length} par(es) LOJA+SETOR+FONTE na referência\n` +
+    `• ${totalRespondidos} justificativa(s) registrada(s)\n` +
+    `• ${totalAusentes} par(es) sem resposta (marcados em vermelho)\n\n` +
     `A aba Respostas_${data} foi mantida para backup.`
   );
+}
+
+// ------------------------------------------------------------
+// Configura o ID da pasta do Drive com os Excel de referência.
+// Execute uma única vez pelo menu ou manualmente no editor.
+// ------------------------------------------------------------
+function configurarPastaReferencia() {
+  const ui       = SpreadsheetApp.getUi();
+  const resposta = ui.prompt(
+    "Configurar pasta de referência",
+    "Cole o ID da pasta do Google Drive que contém os Excel diários:\n" +
+    "(ex: 1ABCxyz_exemplo_de_id_de_pasta)",
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (resposta.getSelectedButton() !== ui.Button.OK) return;
+
+  const id = resposta.getResponseText().trim();
+  if (!id) {
+    ui.alert("❌ ID não informado.");
+    return;
+  }
+
+  PropertiesService.getScriptProperties().setProperty(PROP_PASTA_ID, id);
+  ui.alert(`✅ Pasta configurada com sucesso!\n\nID salvo: ${id}`);
 }
 
 // ------------------------------------------------------------
@@ -235,8 +319,10 @@ function consolidar() {
 // ------------------------------------------------------------
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu("Justificativas")
+    .createMenu("🎰 Justificativas")
     .addItem("Consolidar respostas do dia", "consolidar")
+    .addSeparator()
+    .addItem("Configurar pasta de referência (Drive)", "configurarPastaReferencia")
     .addToUi();
 }
 
