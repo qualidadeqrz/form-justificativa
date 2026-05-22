@@ -518,6 +518,11 @@ function gerarPeriodo(inicio, fim) {
   estado.dataFormulario   = data;
   estado.dataExpiracao    = expiracao;
 
+  // Calcula data de referência (dia anterior ao parâmetro da URL — usado no select e no subtítulo)
+  const _dAnterior = new Date(data + "T12:00:00");
+  _dAnterior.setDate(_dAnterior.getDate() - 1);
+  const dataAnteriorISO = _dAnterior.toISOString().slice(0, 10);
+
   // Preenche o seletor de data referente
   const selectDataRef = document.getElementById("data-ref");
 
@@ -540,9 +545,6 @@ function gerarPeriodo(inicio, fim) {
   // Atualiza subtítulo
   const expiracaoFormatada = expiracao.toLocaleDateString("pt-BR");
   const expiracaoHora = expiracao.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"});
-  const _dAnterior = new Date(data + "T12:00:00");
-  _dAnterior.setDate(_dAnterior.getDate() - 1);
-  const dataAnteriorISO = _dAnterior.toISOString().slice(0, 10);
   if (datas.length === 1) {
     document.getElementById("subtitulo-data").textContent =
       `Referente ao dia anterior (${formatarData(dataAnteriorISO)}). Prazo: até ${expiracaoHora}h do dia ${expiracaoFormatada}.`;
