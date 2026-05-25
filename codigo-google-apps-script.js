@@ -22,6 +22,14 @@ function _lookupId(dict, key) {
   }
   return 0;
 }
+// Converte "dd/MM/yyyy" ou "dd-MM-yyyy" → "yyyy-MM-dd" (ISO, nome da aba)
+function _dataParaISO(s) {
+  const str = String(s).trim();
+  const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  return "";
+}
 
 function doGet(e)  { return handleRequest(e); }
 function doPost(e) { return handleRequest(e); }
@@ -35,7 +43,7 @@ function handleRequest(e) {
     let result;
     if      (action === "validarCPF")      result = validarCPF(params.cpf);
     else if (action === "salvarResposta")  result = salvarResposta(params);
-    else if (action === "buscarRegistros") result = buscarRegistros(params.cpf, params.data);
+    else if (action === "buscarRegistros") result = buscarRegistros(params.cpf, params.data, params.periodo);
     else                                   result = { ok: false, erro: "Ação inválida." };
 
     return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
@@ -69,7 +77,7 @@ function validarCPF(cpfRaw) {
 }
 
 function salvarResposta(dados) {
-  const { cpf, nome, cargo, loja, data_referente, data_resposta, horario, registro, setor, justificativa } = dados;
+  const { cpf, nome, cargo, loja, data_referente, data_resposta, horario, registro, setor, justificativa, periodo } = dados;
 
   if (!cpf || !data_referente || !registro || !setor || !justificativa) {
     return { ok: false, erro: "Dados incompletos para salvar." };
@@ -82,7 +90,8 @@ function salvarResposta(dados) {
   const id_setor = _lookupId(SETOR_ID, setor);
 
   const ss      = SpreadsheetApp.getActiveSpreadsheet();
-  const nomeAba = "Respostas_" + data_referente;
+  // Quando há período (ex: "2026-05-22_a_2026-05-24"), todas as datas vão para a mesma aba
+  const nomeAba = "Respostas_" + (periodo && periodo !== data_referente ? periodo : data_referente);
   let aba       = ss.getSheetByName(nomeAba);
 
   if (!aba) {
@@ -103,23 +112,31 @@ function salvarResposta(dados) {
   return { ok: true, mensagem: "Resposta salva com sucesso." };
 }
 
-function buscarRegistros(cpf, data) {
+function buscarRegistros(cpf, data, periodo) {
   if (!cpf || !data) return { ok: true, registros: [] };
 
   const gestor = validarCPF(cpf);
   if (!gestor.ok) return { ok: true, registros: [] };
 
-  const ss  = SpreadsheetApp.getActiveSpreadsheet();
-  const aba = ss.getSheetByName("Respostas_" + data);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Se há período consolidado, lê a aba do período e filtra pela data de referência
+  let aba = periodo ? ss.getSheetByName("Respostas_" + periodo) : null;
+  const filtrarPorData = !!aba;
+  if (!aba) aba = ss.getSheetByName("Respostas_" + data);
   if (!aba) return { ok: true, registros: [] };
 
-  // Colunas: Loja(0) | Registro(1) | Setor(2) | ... | Nome(6) | ... | ID_LOJA(9) | ID_FONTE(10) | ID_SETOR(11)
+  // Colunas: Loja(0) | Registro(1) | Setor(2) | DataRef(3) | ... | Nome(6) | ... | ID_LOJA(9) | ID_FONTE(10) | ID_SETOR(11)
   const registros = aba.getDataRange().getValues().slice(1)
-    .filter(row => String(row[0]).trim() === gestor.loja && String(row[6]).trim() === gestor.nome)
+    .filter(row => {
+      if (String(row[0]).trim() !== gestor.loja || String(row[6]).trim() !== gestor.nome) return false;
+      if (filtrarPorData) return _dataParaISO(String(row[3])) === data;
+      return true;
+    })
     .map(row => ({
-      registro:      String(row[1]),
-      setor:         String(row[2]),
-      justificativa: String(row[8])
+      registro:        String(row[1]),
+      setor:           String(row[2]),
+      justificativa:   String(row[8]),
+      data_referente:  String(row[3])
     }));
 
   return { ok: true, registros };
@@ -158,8 +175,9 @@ function lerReferenciaDrive() {
   const aba   = ss.getSheets()[0];
   const dados = aba.getDataRange().getValues().slice(1);
 
-  const pares  = [];
-  const vistos = new Set();
+  const pares    = [];
+  const vistos   = new Set();
+  const datasISO = new Set(); // datas únicas em formato yyyy-MM-dd (nomes das abas)
   let dataReferencia = "";
 
   dados.forEach(row => {
@@ -173,21 +191,29 @@ function lerReferenciaDrive() {
 
     if (!loja || !setor || !fonte) return;
 
-    const chave = `${id_loja}||${id_setor}||${id_fonte}`;
-    if (!vistos.has(chave)) {
-      vistos.add(chave);
-      pares.push({ loja, setor, fonte, id_loja, id_setor, id_fonte });
-    }
-    if (!dataReferencia && data) {
-      dataReferencia = data instanceof Date
+    // Converte DATA (col E) para os dois formatos necessários
+    let dataRefFmt = ""; // dd-MM-yyyy (exibição e nome do consolidado)
+    let dataRefISO = ""; // yyyy-MM-dd (nome da aba Respostas_)
+    if (data) {
+      dataRefFmt = data instanceof Date
         ? Utilities.formatDate(data, Session.getScriptTimeZone(), "dd-MM-yyyy")
         : String(data).replace(/\//g, "-");
+      dataRefISO = _dataParaISO(dataRefFmt);
+      if (dataRefISO) datasISO.add(dataRefISO);
+      if (!dataReferencia) dataReferencia = dataRefFmt;
+    }
+
+    // Chave inclui a data para suportar Excel com múltiplas datas
+    const chave = `${id_loja}||${id_setor}||${id_fonte}||${dataRefISO}`;
+    if (!vistos.has(chave)) {
+      vistos.add(chave);
+      pares.push({ loja, setor, fonte, id_loja, id_setor, id_fonte, dataRefISO, dataRefFmt });
     }
   });
 
   if (tempId) Drive.Files.remove(tempId);
 
-  return { pares, nomeArquivo: alvo.getName(), dataReferencia };
+  return { pares, nomeArquivo: alvo.getName(), dataReferencia, datasISO: Array.from(datasISO) };
 }
 
 // ------------------------------------------------------------
@@ -197,25 +223,32 @@ function consolidar() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  const abas    = ss.getSheets().map(a => a.getName());
-  const recente = abas.filter(n => n.startsWith("Respostas_")).sort().reverse()[0];
-  if (!recente) { ui.alert("❌ Nenhuma aba de Respostas encontrada."); return; }
-
-  const data    = recente.replace("Respostas_", "");
-  const abaResp = ss.getSheetByName(recente);
-
-  let referencia, nomeArquivo, dataConsolidado;
+  let referencia, nomeArquivo, dataConsolidado, datasISO;
   try {
-    ({ pares: referencia, nomeArquivo, dataReferencia: dataConsolidado } = lerReferenciaDrive());
+    ({ pares: referencia, nomeArquivo, dataReferencia: dataConsolidado, datasISO } = lerReferenciaDrive());
   } catch (err) {
     ui.alert("❌ Erro ao ler referência do Drive:\n\n" + err.message);
     return;
   }
-  if (!dataConsolidado) dataConsolidado = data;
   if (referencia.length === 0) { ui.alert("❌ O arquivo de referência não contém nenhum par válido."); return; }
 
-  // Colunas respostas: Loja(0) Registro(1) Setor(2) DataRef(3) DataResp(4) Horario(5) Nome(6) Cargo(7) Just(8) ID_LOJA(9) ID_FONTE(10) ID_SETOR(11)
-  const respostaDados = abaResp.getDataRange().getValues().slice(1);
+  // Coleta respostas de TODAS as abas Respostas_ presentes na planilha
+  const respostaDados   = [];
+  const abasEncontradas = [];
+
+  const abasResp = ss.getSheets().map(a => a.getName()).filter(n => n.startsWith("Respostas_"));
+  if (abasResp.length === 0) {
+    ui.alert("❌ Nenhuma aba de Respostas encontrada.");
+    return;
+  }
+  abasResp.forEach(nomeAba => {
+    ss.getSheetByName(nomeAba).getDataRange().getValues().slice(1).forEach(r => respostaDados.push(r));
+    abasEncontradas.push(nomeAba);
+  });
+
+  if (!dataConsolidado) dataConsolidado = datasISO[0]
+    ? (() => { const [a,m,d] = datasISO[0].split("-"); return `${d}-${m}-${a}`; })()
+    : "sem-data";
 
   const nomeConsolidado = "Consolidado_" + dataConsolidado;
   const abaExistente    = ss.getSheetByName(nomeConsolidado);
@@ -232,10 +265,14 @@ function consolidar() {
   let totalRespondidos = 0;
   let totalAusentes    = 0;
 
-  referencia.forEach(({ loja, setor, fonte, id_loja, id_setor, id_fonte }) => {
+  referencia.forEach(({ loja, setor, fonte, id_loja, id_setor, id_fonte, dataRefISO, dataRefFmt }) => {
     const linhas = respostaDados.filter(r => {
-      const rId9  = r[9];
-      // Linha nova (tem IDs): compara por ID — imune a acentos e capitalização
+      // Filtra pela data de referência (coluna D da resposta = "dd/MM/yyyy")
+      if (dataRefISO) {
+        if (_dataParaISO(String(r[3])) !== dataRefISO) return false;
+      }
+      // Linha nova (tem IDs): compara por ID
+      const rId9 = r[9];
       if (rId9 !== "" && rId9 != null && !isNaN(Number(rId9))) {
         return Number(r[9])  === id_loja  &&
                Number(r[10]) === id_fonte &&
@@ -247,11 +284,13 @@ function consolidar() {
              _normStr(r[1]) === _normStr(fonte);
     });
 
+    const dataDisplay = dataRefFmt ? dataRefFmt.replace(/-/g, "/") : dataConsolidado.replace(/-/g, "/");
+
     if (linhas.length > 0) {
       linhas.forEach(linha => abaConsolidado.appendRow(linha.slice(0, 9)));
       totalRespondidos += linhas.length;
     } else {
-      abaConsolidado.appendRow([loja, fonte, setor, dataConsolidado.replace(/-/g, "/"), "", "", "", "", "AUSENTE - sem justificativa"]);
+      abaConsolidado.appendRow([loja, fonte, setor, dataDisplay, "", "", "", "", "AUSENTE - sem justificativa"]);
       totalAusentes++;
     }
   });
@@ -266,13 +305,16 @@ function consolidar() {
 
   abaConsolidado.autoResizeColumns(1, 9);
 
+  const infoAbas = `• Abas lidas: ${abasEncontradas.join(", ")}\n`;
+
   ui.alert(
-    `✅ Consolidado_${dataConsolidado} criado!\n\n` +
+    `✅ ${nomeConsolidado} criado!\n\n` +
     `• Referência: ${nomeArquivo}\n` +
-    `• ${referencia.length} par(es) LOJA+SETOR+FONTE na referência\n` +
+    infoAbas +
+    `• ${referencia.length} par(es) LOJA+SETOR+FONTE+DATA na referência\n` +
     `• ${totalRespondidos} justificativa(s) registrada(s)\n` +
     `• ${totalAusentes} par(es) sem resposta (marcados em vermelho)\n\n` +
-    `A aba Respostas_${data} foi mantida para backup.`
+    `As abas de Respostas foram mantidas para backup.`
   );
 }
 

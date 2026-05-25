@@ -523,6 +523,9 @@ function gerarPeriodo(inicio, fim) {
   _dAnterior.setDate(_dAnterior.getDate() - 1);
   const dataAnteriorISO = _dAnterior.toISOString().slice(0, 10);
 
+  // Período para nomear a aba de respostas: data única → só essa data; múltiplas → "inicio_a_fim"
+  estado.periodo = datas.length === 1 ? dataAnteriorISO : (data + "_a_" + fimSelecao);
+
   // Preenche o seletor de data referente
   const selectDataRef = document.getElementById("data-ref");
 
@@ -651,7 +654,7 @@ async function buscarRegistros(cpf) {
 
   try {
     const data = document.getElementById("data-ref").value || estado.dataFormulario;
-    const url  = `${API_URL}?action=buscarRegistros&cpf=${encodeURIComponent(cpf)}&data=${encodeURIComponent(data)}`;
+    const url  = `${API_URL}?action=buscarRegistros&cpf=${encodeURIComponent(cpf)}&data=${encodeURIComponent(data)}&periodo=${encodeURIComponent(estado.periodo || "")}`;
     const resp = await fetch(url);
     const json = await resp.json();
     lista.innerHTML = "";
@@ -662,7 +665,8 @@ async function buscarRegistros(cpf) {
         li.innerHTML =
           `<strong>Tipo de registro:</strong> ${r.registro}<br>` +
           `<strong>Setor:</strong> ${r.setor}<br>` +
-          `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span>`;
+          `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span><br>` +
+          `<strong>Data de referência:</strong> ${r.data_referente}`;
         lista.appendChild(li);
       });
     } else {
@@ -793,7 +797,8 @@ async function enviarFormulario() {
     horario:        agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"}),
     registro:       document.getElementById("registro").value,
     setor:          document.getElementById("setor").value,
-    justificativa:  justificativa
+    justificativa:  justificativa,
+    periodo:        estado.periodo || ""
   };
 
   try {
