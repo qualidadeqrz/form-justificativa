@@ -456,6 +456,16 @@ function formatarData(iso) {
   const [a, m, d] = iso.split("-");
   return `${d}/${m}/${a}`;
 }
+// Garante exibição dd/MM/yyyy mesmo se o backend retornar string bruta de objeto Date
+function formatarDataReferente(val) {
+  if (!val) return "";
+  // Já no formato correto
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(val)) return val;
+  // Tenta extrair data de string ISO (yyyy-MM-dd)
+  const iso = val.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return val;
+}
 
 // Gera lista de datas entre data_inicio e data_fim (inclusive)
 function gerarPeriodo(inicio, fim) {
@@ -666,7 +676,7 @@ async function buscarRegistros(cpf) {
           `<strong>Tipo de registro:</strong> ${r.registro}<br>` +
           `<strong>Setor:</strong> ${r.setor}<br>` +
           `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span><br>` +
-          `<strong>Data de referência:</strong> ${r.data_referente}`;
+          `<strong>Data de referência:</strong> ${formatarDataReferente(r.data_referente)}`;
         lista.appendChild(li);
       });
     } else {
