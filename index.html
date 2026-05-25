@@ -666,8 +666,7 @@ async function buscarRegistros(cpf) {
   const lista = document.getElementById("registros-lista");
 
   try {
-    const data = document.getElementById("data-ref").value || estado.dataFormulario;
-    const url  = `${API_URL}?action=buscarRegistros&cpf=${encodeURIComponent(cpf)}&data=${encodeURIComponent(data)}&periodo=${encodeURIComponent(estado.periodo || "")}`;
+    const url  = `${API_URL}?action=buscarRegistros&cpf=${encodeURIComponent(cpf)}&data=${encodeURIComponent(estado.dataFormulario)}&periodo=${encodeURIComponent(estado.periodo || "")}`;
     const resp = await fetch(url);
     const json = await resp.json();
     lista.innerHTML = "";
