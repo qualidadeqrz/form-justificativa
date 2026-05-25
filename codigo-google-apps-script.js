@@ -166,10 +166,10 @@ function lerReferenciaDrive() {
     const loja     = String(row[1]).trim(); // B
     const setor    = String(row[2]).trim(); // C
     const fonte    = String(row[3]).trim(); // D
-    const data     = row[4];               // E
-    const id_loja  = Number(row[5]);       // F
-    const id_setor = Number(row[6]);       // G
-    const id_fonte = Number(row[7]);       // H
+    const data     = row[4];                // E
+    const id_loja  = Number(row[5]);        // F
+    const id_setor = Number(row[6]);        // G
+    const id_fonte = Number(row[7]);        // H
 
     if (!loja || !setor || !fonte) return;
 
