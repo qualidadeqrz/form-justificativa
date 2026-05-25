@@ -30,6 +30,13 @@ function _dataParaISO(s) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
   return "";
 }
+// getValues() pode retornar Date objects quando a célula contém uma data
+function _cellToISO(val) {
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  return _dataParaISO(String(val));
+}
 
 function doGet(e)  { return handleRequest(e); }
 function doPost(e) { return handleRequest(e); }
@@ -119,24 +126,22 @@ function buscarRegistros(cpf, data, periodo) {
   if (!gestor.ok) return { ok: true, registros: [] };
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  // Se há período consolidado, lê a aba do período e filtra pela data de referência
+  // Busca na aba do período; se não existir, tenta a aba da data específica
   let aba = periodo ? ss.getSheetByName("Respostas_" + periodo) : null;
-  const filtrarPorData = !!aba;
   if (!aba) aba = ss.getSheetByName("Respostas_" + data);
   if (!aba) return { ok: true, registros: [] };
 
+  // Retorna todos os registros do gestor na aba — sem filtro de data para exibir todo o período
   // Colunas: Loja(0) | Registro(1) | Setor(2) | DataRef(3) | ... | Nome(6) | ... | ID_LOJA(9) | ID_FONTE(10) | ID_SETOR(11)
   const registros = aba.getDataRange().getValues().slice(1)
-    .filter(row => {
-      if (String(row[0]).trim() !== gestor.loja || String(row[6]).trim() !== gestor.nome) return false;
-      if (filtrarPorData) return _dataParaISO(String(row[3])) === data;
-      return true;
-    })
+    .filter(row => String(row[0]).trim() === gestor.loja && String(row[6]).trim() === gestor.nome)
     .map(row => ({
       registro:        String(row[1]),
       setor:           String(row[2]),
       justificativa:   String(row[8]),
-      data_referente:  String(row[3])
+      data_referente:  row[3] instanceof Date
+        ? Utilities.formatDate(row[3], Session.getScriptTimeZone(), "dd/MM/yyyy")
+        : String(row[3])
     }));
 
   return { ok: true, registros };
@@ -250,7 +255,16 @@ function consolidar() {
     ? (() => { const [a,m,d] = datasISO[0].split("-"); return `${d}-${m}-${a}`; })()
     : "sem-data";
 
-  const nomeConsolidado = "Consolidado_" + dataConsolidado;
+  // Quando o período tem múltiplas datas, inclui "inicio_a_fim" no título — igual ao nome da aba de Respostas
+  let nomeConsolidado;
+  if (datasISO.length > 1) {
+    const sorted = [...datasISO].sort();
+    const [a1, m1, d1] = sorted[0].split("-");
+    const [a2, m2, d2] = sorted[sorted.length - 1].split("-");
+    nomeConsolidado = `Consolidado_${d1}-${m1}-${a1}_a_${d2}-${m2}-${a2}`;
+  } else {
+    nomeConsolidado = "Consolidado_" + dataConsolidado;
+  }
   const abaExistente    = ss.getSheetByName(nomeConsolidado);
   if (abaExistente) ss.deleteSheet(abaExistente);
 
@@ -269,7 +283,7 @@ function consolidar() {
     const linhas = respostaDados.filter(r => {
       // Filtra pela data de referência (coluna D da resposta = "dd/MM/yyyy")
       if (dataRefISO) {
-        if (_dataParaISO(String(r[3])) !== dataRefISO) return false;
+        if (_cellToISO(r[3]) !== dataRefISO) return false;
       }
       // Linha nova (tem IDs): compara por ID
       const rId9 = r[9];
