@@ -143,7 +143,18 @@ function lerReferenciaDrive() {
     if (proximo.getLastUpdated() > alvo.getLastUpdated()) alvo = proximo;
   }
 
-  const ss    = SpreadsheetApp.openById(alvo.getId());
+  const mimeXlsx   = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const mimeSheets = "application/vnd.google-apps.spreadsheet";
+  let   ssId   = alvo.getId();
+  let   tempId = null;
+
+  if (alvo.getMimeType() === mimeXlsx) {
+    const copia = Drive.Files.copy({ title: "_temp_ausencias", mimeType: mimeSheets }, ssId);
+    tempId = copia.id;
+    ssId   = tempId;
+  }
+
+  const ss    = SpreadsheetApp.openById(ssId);
   const aba   = ss.getSheets()[0];
   const dados = aba.getDataRange().getValues().slice(1);
 
@@ -173,6 +184,8 @@ function lerReferenciaDrive() {
         : String(data).replace(/\//g, "-");
     }
   });
+
+  if (tempId) Drive.Files.remove(tempId);
 
   return { pares, nomeArquivo: alvo.getName(), dataReferencia };
 }

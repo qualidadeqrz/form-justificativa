@@ -487,7 +487,7 @@ function gerarPeriodo(inicio, fim) {
   // Calcula janela de acesso: das 14h do dia "data" até 14h do dia seguinte ao "data_fim"
   const fimPeriodo = (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) ? dataFim : data;
   const [afim, mfim, dfim] = fimPeriodo.split("-").map(Number);
-  const inicio    = new Date(afim, mfim-1, dfim, hr, min, 0);        // 14h30 do último dia do período (data_fim)
+  const inicio    = new Date(afim, mfim-1, dfim, hr, 0, 0);        // 14h00 do último dia do período (data_fim)
   const expiracao = new Date(afim, mfim-1, dfim+1, hr, min, 0);      // 14h30 do dia seguinte
   const agora     = new Date();
 
