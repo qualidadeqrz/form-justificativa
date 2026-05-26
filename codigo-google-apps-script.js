@@ -1,9 +1,12 @@
-const ABA_GESTORES = "Gestores";
-const COL_NOME    = 1;
-const COL_CPF     = 2;
-const COL_CARGO   = 3;
-const COL_LOJA    = 4;
-const COL_ID_LOJA = 5;
+const SS_REFERENCIA_ID  = "1P2ghQVIpjQRgMBQqjjv_X_Tkpp1RJxLFmh-JFI4wIcg";
+const ABA_REFERENCIA    = "Referência";
+
+// Colunas da aba "Referência": Cargo | Nome Completo | Nome | CPF | Regional | Id Loja | Loja | Telefone
+const COL_CARGO   = 1;
+const COL_NOME    = 3;
+const COL_CPF     = 4;
+const COL_ID_LOJA = 6;
+const COL_LOJA    = 7;
 
 const PROP_PASTA_ID = "PASTA_REFERENCIA_ID";
 
@@ -64,9 +67,9 @@ function validarCPF(cpfRaw) {
   if (!cpfRaw) return { ok: false, erro: "CPF não informado." };
 
   const cpf = cpfRaw.replace(/\D/g, "");
-  const ss  = SpreadsheetApp.getActiveSpreadsheet();
-  const aba = ss.getSheetByName(ABA_GESTORES);
-  if (!aba) return { ok: false, erro: `Aba "${ABA_GESTORES}" não encontrada.` };
+  const ss  = SpreadsheetApp.openById(SS_REFERENCIA_ID);
+  const aba = ss.getSheetByName(ABA_REFERENCIA);
+  if (!aba) return { ok: false, erro: `Aba "${ABA_REFERENCIA}" não encontrada.` };
 
   const dados = aba.getDataRange().getValues();
   for (let i = 1; i < dados.length; i++) {
@@ -74,11 +77,11 @@ function validarCPF(cpfRaw) {
     if (cpfPlanilha === cpf) {
       return {
         ok:      true,
-        nome:    dados[i][COL_NOME    - 1],
+        nome:    String(dados[i][COL_NOME - 1]),
         cpf:     cpfPlanilha,
-        cargo:   dados[i][COL_CARGO   - 1],
-        loja:    dados[i][COL_LOJA    - 1],
-        id_loja: Number(dados[i][COL_ID_LOJA - 1]) || 0
+        cargo:   String(dados[i][COL_CARGO         - 1]),
+        loja:    String(dados[i][COL_LOJA          - 1]),
+        id_loja: Number(dados[i][COL_ID_LOJA       - 1]) || 0
       };
     }
   }
