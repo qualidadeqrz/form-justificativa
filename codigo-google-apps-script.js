@@ -95,9 +95,8 @@ function salvarResposta(dados) {
     return { ok: false, erro: "Dados incompletos para salvar." };
   }
 
-  // Extrai ID numérico da loja — ex: "09 - HQ ALTO DA CONCEIÇÃO" → 9
-  const lojaIdMatch = String(loja).match(/^(\d+)/);
-  const id_loja  = lojaIdMatch ? parseInt(lojaIdMatch[1]) : 0;
+  const gestor   = validarCPF(cpf);
+  const id_loja  = gestor.ok ? gestor.id_loja : 0;
   const id_fonte = _lookupId(FONTE_ID, registro);
   const id_setor = _lookupId(SETOR_ID, setor);
 
