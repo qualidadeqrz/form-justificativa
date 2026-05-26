@@ -2,11 +2,12 @@ const SS_REFERENCIA_ID  = "1P2ghQVIpjQRgMBQqjjv_X_Tkpp1RJxLFmh-JFI4wIcg";
 const ABA_REFERENCIA    = "Referência";
 
 // Colunas da aba "Referência": Cargo | Nome Completo | Nome | CPF | Regional | Id Loja | Loja | Telefone
-const COL_CARGO   = 1;
-const COL_NOME    = 3;
-const COL_CPF     = 4;
-const COL_ID_LOJA = 6;
-const COL_LOJA    = 7;
+const COL_CARGO         = 1;
+const COL_NOME_COMPLETO = 2;
+const COL_NOME          = 3;
+const COL_CPF           = 4;
+const COL_ID_LOJA       = 6;
+const COL_LOJA          = 7;
 
 const PROP_PASTA_ID = "PASTA_REFERENCIA_ID";
 
@@ -40,6 +41,20 @@ function _cellToISO(val) {
     return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
   }
   return _dataParaISO(String(val));
+}
+function _fmtData(val) {
+  if (val instanceof Date) return Utilities.formatDate(val, Session.getScriptTimeZone(), "dd/MM/yyyy");
+  return String(val);
+}
+function _fmtHora(val) {
+  if (val instanceof Date) return Utilities.formatDate(val, Session.getScriptTimeZone(), "HH:mm:ss");
+  return String(val);
+}
+// Remove prefixo numérico de nome de loja — ex: "07 - HQ BOA VISTA" → "HQ BOA VISTA"
+function _nomeLoja(s) {
+  const str = String(s).trim();
+  const idx = str.indexOf(" - ");
+  return idx >= 0 ? str.substring(idx + 3) : str;
 }
 
 function doGet(e)  { return handleRequest(e); }
@@ -239,6 +254,16 @@ function consolidar() {
   }
   if (referencia.length === 0) { ui.alert("❌ O arquivo de referência não contém nenhum par válido."); return; }
 
+  // Monta lookup id_loja+nome_curto → nome_completo (maiúsculo) a partir da aba Referência
+  const nomeMap = {};
+  const refAba  = SpreadsheetApp.openById(SS_REFERENCIA_ID).getSheetByName(ABA_REFERENCIA);
+  if (refAba) {
+    refAba.getDataRange().getValues().slice(1).forEach(r => {
+      const chave = `${Number(r[COL_ID_LOJA - 1])}||${_normStr(String(r[COL_NOME - 1]))}`;
+      nomeMap[chave] = String(r[COL_NOME_COMPLETO - 1]).toUpperCase();
+    });
+  }
+
   // Coleta respostas de TODAS as abas Respostas_ presentes na planilha
   const respostaDados   = [];
   const abasEncontradas = [];
@@ -267,12 +292,12 @@ function consolidar() {
   } else {
     nomeConsolidado = "Consolidado_" + dataConsolidado;
   }
-  const abaExistente    = ss.getSheetByName(nomeConsolidado);
+  const abaExistente = ss.getSheetByName(nomeConsolidado);
   if (abaExistente) ss.deleteSheet(abaExistente);
 
   const abaConsolidado = ss.insertSheet(nomeConsolidado);
-  abaConsolidado.appendRow(["Loja", "Registro", "Setor", "Data Referente", "Data da Resposta", "Horário da Resposta", "Nome", "Cargo", "Justificativa"]);
-  const cabecalho = abaConsolidado.getRange(1, 1, 1, 9);
+  abaConsolidado.appendRow(["ID Loja", "Loja", "Registro", "Setor", "Data Referente", "Data da Resposta", "Horário da Resposta", "Nome Completo", "Cargo", "Justificativa"]);
+  const cabecalho = abaConsolidado.getRange(1, 1, 1, 10);
   cabecalho.setFontWeight("bold");
   cabecalho.setBackground("#1e3a5f");
   cabecalho.setFontColor("#ffffff");
@@ -303,15 +328,24 @@ function consolidar() {
     const dataDisplay = dataRefFmt ? dataRefFmt.replace(/-/g, "/") : dataConsolidado.replace(/-/g, "/");
 
     if (linhas.length > 0) {
-      linhas.forEach(linha => abaConsolidado.appendRow(linha.slice(0, 9)));
+      linhas.forEach(linha => {
+        const chave        = `${id_loja}||${_normStr(String(linha[6]))}`;
+        const nomeCompleto = nomeMap[chave] || String(linha[6]).toUpperCase();
+        abaConsolidado.appendRow([
+          id_loja, _nomeLoja(linha[0]),
+          String(linha[1]), String(linha[2]), _fmtData(linha[3]),
+          _fmtData(linha[4]), _fmtHora(linha[5]),
+          nomeCompleto, String(linha[7]), String(linha[8])
+        ]);
+      });
       totalRespondidos += linhas.length;
     } else {
-      abaConsolidado.appendRow([loja, fonte, setor, dataDisplay, "", "", "", "", "AUSENTE - sem justificativa"]);
+      abaConsolidado.appendRow([id_loja, _nomeLoja(loja), fonte, setor, dataDisplay, "", "", "", "", "AUSENTE - sem justificativa"]);
       totalAusentes++;
     }
   });
 
-  abaConsolidado.autoResizeColumns(1, 9);
+  abaConsolidado.autoResizeColumns(1, 10);
 
   const infoAbas = `• Abas lidas: ${abasEncontradas.join(", ")}\n`;
 

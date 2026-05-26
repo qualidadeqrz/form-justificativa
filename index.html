@@ -814,7 +814,7 @@ async function enviarFormulario() {
 
   try {
     const params = new URLSearchParams({ action: "salvarResposta", ...payload });
-    const resp = await fetch(`${API_URL}?${params.toString()}`);
+    const resp = await fetch(API_URL, { method: "POST", body: params });
     const json = await resp.json();
 
     if (json.ok) {
