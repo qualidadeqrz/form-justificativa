@@ -1,8 +1,9 @@
 const ABA_GESTORES = "Gestores";
-const COL_NOME  = 1;
-const COL_CPF   = 2;
-const COL_CARGO = 3;
-const COL_LOJA  = 4;
+const COL_NOME    = 1;
+const COL_CPF     = 2;
+const COL_CARGO   = 3;
+const COL_LOJA    = 4;
+const COL_ID_LOJA = 5;
 
 const PROP_PASTA_ID = "PASTA_REFERENCIA_ID";
 
@@ -72,11 +73,12 @@ function validarCPF(cpfRaw) {
     const cpfPlanilha = String(dados[i][COL_CPF - 1]).replace(/\D/g, "");
     if (cpfPlanilha === cpf) {
       return {
-        ok:    true,
-        nome:  dados[i][COL_NOME  - 1],
-        cpf:   cpfPlanilha,
-        cargo: dados[i][COL_CARGO - 1],
-        loja:  dados[i][COL_LOJA  - 1]
+        ok:      true,
+        nome:    dados[i][COL_NOME    - 1],
+        cpf:     cpfPlanilha,
+        cargo:   dados[i][COL_CARGO   - 1],
+        loja:    dados[i][COL_LOJA    - 1],
+        id_loja: Number(dados[i][COL_ID_LOJA - 1]) || 0
       };
     }
   }
@@ -131,14 +133,12 @@ function buscarRegistros(cpf, data, periodo) {
   if (!aba) aba = ss.getSheetByName("Respostas_" + data);
   if (!aba) return { ok: true, registros: [] };
 
-  // Retorna todos os registros do gestor na aba — sem filtro de data para exibir todo o período
-  // Colunas: Loja(0) | Registro(1) | Setor(2) | DataRef(3) | ... | Nome(6) | ... | ID_LOJA(9) | ID_FONTE(10) | ID_SETOR(11)
+  // Colunas: Loja(0) | Registro(1) | Setor(2) | DataRef(3) | ... | ID_LOJA(9) | ID_FONTE(10) | ID_SETOR(11)
   const registros = aba.getDataRange().getValues().slice(1)
-    .filter(row => String(row[0]).trim() === gestor.loja && String(row[6]).trim() === gestor.nome)
+    .filter(row => Number(row[9]) === gestor.id_loja)
     .map(row => ({
       registro:        String(row[1]),
       setor:           String(row[2]),
-      justificativa:   String(row[8]),
       data_referente:  row[3] instanceof Date
         ? Utilities.formatDate(row[3], Session.getScriptTimeZone(), "dd/MM/yyyy")
         : String(row[3])
@@ -306,14 +306,6 @@ function consolidar() {
     } else {
       abaConsolidado.appendRow([loja, fonte, setor, dataDisplay, "", "", "", "", "AUSENTE - sem justificativa"]);
       totalAusentes++;
-    }
-  });
-
-  const todosValores = abaConsolidado.getDataRange().getValues();
-  todosValores.forEach((row, i) => {
-    if (i === 0) return;
-    if (row[8] === "AUSENTE - sem justificativa") {
-      abaConsolidado.getRange(i + 1, 1, 1, 9).setBackground("#fde8e8").setFontColor("#9b1c1c").setFontWeight("bold");
     }
   });
 

@@ -677,7 +677,6 @@ async function buscarRegistros(cpf) {
         li.innerHTML =
           `<strong>Tipo de registro:</strong> ${r.registro}<br>` +
           `<strong>Setor:</strong> ${r.setor}<br>` +
-          `<span class="reg-justificativa"><strong>Justificativa:</strong> ${r.justificativa}</span>` +
           `<strong>Data de referência:</strong> ${formatarDataReferente(r.data_referente)}`;
         lista.appendChild(li);
       });
