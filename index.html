@@ -351,10 +351,10 @@
         ✅ Identificado: <strong id="gestor-nome"></strong> — <span id="gestor-loja"></span>
       </div>
       <button class="btn-registros" id="btn-toggle-registros" onclick="toggleRegistros()">
-        📋 <span id="btn-registros-texto">Ver registros de hoje</span> <span class="chevron">▼</span>
+        📋 <span id="btn-registros-texto">Registros já realizados</span> <span class="chevron">▼</span>
       </button>
       <div class="registros-hoje" id="registros-hoje" style="display:none">
-        <div class="registros-hoje-titulo">Registros feitos hoje:</div>
+        <div class="registros-hoje-titulo">Registros já realizados:</div>
         <ol class="registros-lista" id="registros-lista"></ol>
       </div>
       <div class="alert" id="cpf-alert"></div>
@@ -673,10 +673,11 @@ async function buscarRegistros(cpf) {
 
     if (json.ok && Array.isArray(json.registros) && json.registros.length > 0) {
       json.registros.forEach((r, i) => {
+        const autor = estado.gestor.nome + (estado.gestor.cargo ? ` (${estado.gestor.cargo})` : "");
         const li = document.createElement("li");
         li.innerHTML =
-          `<strong>Tipo de registro:</strong> ${r.registro}<br>` +
-          `<strong>Setor:</strong> ${r.setor}<br>` +
+          `<strong>Registro e setor:</strong> ${r.registro} — ${r.setor}<br>` +
+          `<strong>Autor(a):</strong> ${autor}<br>` +
           `<strong>Data de referência:</strong> ${formatarDataReferente(r.data_referente)}`;
         lista.appendChild(li);
       });
@@ -704,7 +705,7 @@ function toggleRegistros() {
   painel.style.display   = aberto ? "none" : "block";
   btn.classList.toggle("aberto", !aberto);
   chevron.textContent    = aberto ? "▼" : "▲";
-  texto.textContent      = aberto ? "Ver registros de hoje" : "Ocultar registros";
+  texto.textContent      = aberto ? "Registros já realizados" : "Ocultar registros";
 }
 
 // ETAPA 2 (múltiplas datas) — Selecionar data
