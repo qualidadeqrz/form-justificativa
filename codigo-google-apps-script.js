@@ -1,5 +1,6 @@
 const SS_REFERENCIA_ID  = "1P2ghQVIpjQRgMBQqjjv_X_Tkpp1RJxLFmh-JFI4wIcg";
 const ABA_REFERENCIA    = "Referência";
+const PROP_PASTA_ID = "PASTA_REFERENCIA_ID";
 
 // Colunas da aba "Referência": Cargo | Nome Completo | Nome | CPF | Regional | Id Loja | Loja | Telefone
 const COL_CARGO         = 1;
@@ -8,8 +9,6 @@ const COL_NOME          = 3;
 const COL_CPF           = 4;
 const COL_ID_LOJA       = 6;
 const COL_LOJA          = 7;
-
-const PROP_PASTA_ID = "PASTA_REFERENCIA_ID";
 
 // IDs fixos — devem ser idênticos aos do planilha_ausencias.py
 // Usados apenas como fallback; o cruzamento principal usa os IDs lidos do Excel de referência.
@@ -296,8 +295,8 @@ function consolidar() {
   if (abaExistente) ss.deleteSheet(abaExistente);
 
   const abaConsolidado = ss.insertSheet(nomeConsolidado);
-  abaConsolidado.appendRow(["ID Loja", "Loja", "Registro", "Setor", "Data Referente", "Data da Resposta", "Horário da Resposta", "Nome Completo", "Cargo", "Justificativa"]);
-  const cabecalho = abaConsolidado.getRange(1, 1, 1, 10);
+  abaConsolidado.appendRow(["ID Loja", "Loja", "Registro", "Setor", "Data Referente", "Data da Resposta", "Horário da Resposta", "Nome Completo", "Cargo", "Justificativa", "RESOLVIDO"]);
+  const cabecalho = abaConsolidado.getRange(1, 1, 1, 11);
   cabecalho.setFontWeight("bold");
   cabecalho.setBackground("#1e3a5f");
   cabecalho.setFontColor("#ffffff");
@@ -335,17 +334,17 @@ function consolidar() {
           id_loja, _nomeLoja(linha[0]),
           String(linha[1]), String(linha[2]), _fmtData(linha[3]),
           _fmtData(linha[4]), _fmtHora(linha[5]),
-          nomeCompleto, String(linha[7]), String(linha[8])
+          nomeCompleto, String(linha[7]), String(linha[8]), ""
         ]);
       });
       totalRespondidos += linhas.length;
     } else {
-      abaConsolidado.appendRow([id_loja, _nomeLoja(loja), fonte, setor, dataDisplay, "", "", "", "", "AUSENTE - sem justificativa"]);
+      abaConsolidado.appendRow([id_loja, _nomeLoja(loja), fonte, setor, dataDisplay, "", "", "", "", "AUSENTE - sem justificativa", ""]);
       totalAusentes++;
     }
   });
 
-  abaConsolidado.autoResizeColumns(1, 10);
+  abaConsolidado.autoResizeColumns(1, 11);
 
   const infoAbas = `• Abas lidas: ${abasEncontradas.join(", ")}\n`;
 
@@ -358,6 +357,42 @@ function consolidar() {
     `• ${totalAusentes} par(es) sem resposta (marcados em vermelho)\n\n` +
     `As abas de Respostas foram mantidas para backup.`
   );
+}
+
+function normalizarResolvido() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Usa aba ativa se for Consolidado; senão pega o mais recente na planilha
+  let aba = ss.getActiveSheet();
+  if (!aba.getName().startsWith("Consolidado_")) {
+    const abas = ss.getSheets().filter(a => a.getName().startsWith("Consolidado_"));
+    if (abas.length === 0) {
+      ui.alert('❌ Nenhuma aba "Consolidado_" encontrada.\nExecute a consolidação primeiro.');
+      return;
+    }
+    aba = abas[abas.length - 1];
+  }
+
+  const dados  = aba.getDataRange().getValues();
+  const colIdx = dados[0].findIndex(h => _normStr(String(h)) === "resolvido");
+  if (colIdx === -1) {
+    ui.alert(`❌ Coluna "RESOLVIDO" não encontrada na aba "${aba.getName()}".\nConsolide novamente para gerar a coluna.`);
+    return;
+  }
+  const colNum = colIdx + 1; // 1-based para o Range
+
+  for (let i = 1; i < dados.length; i++) {
+    const raw    = String(dados[i][colIdx]).trim().toLowerCase();
+    const isTrue = raw === "ok" || raw === "1";
+    const cell   = aba.getRange(i + 1, colNum);
+    cell.setValue(isTrue);
+    cell.setFontColor("#000000");
+    cell.setBackground(isTrue ? "#00b050" : "#cc0000");
+  }
+
+  aba.autoResizeColumns(colNum, 1);
+  ui.alert(`✅ Coluna RESOLVIDO normalizada!\n\n• Aba: ${aba.getName()}\n• ${dados.length - 1} linha(s) processada(s).`);
 }
 
 function configurarPastaReferencia() {
@@ -378,6 +413,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("🔰 Justificativas")
     .addItem("Consolidar respostas do dia", "consolidar")
+    .addItem("Normalizar coluna RESOLVIDO", "normalizarResolvido")
     .addSeparator()
     .addItem("Configurar pasta de referência (Drive)", "configurarPastaReferencia")
     .addToUi();
