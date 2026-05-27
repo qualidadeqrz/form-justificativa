@@ -676,7 +676,7 @@ async function buscarRegistros(cpf) {
         const autor = estado.gestor.nome + (estado.gestor.cargo ? ` (${estado.gestor.cargo})` : "");
         const li = document.createElement("li");
         li.innerHTML =
-          `<strong>Registro e setor:</strong> ${r.registro} — ${r.setor}<br>` +
+          `<strong>Registro e setor:</strong> ${r.registro.includes(' - ') ? r.registro.replace(' - ', ' (') + ')' : r.registro} — ${r.setor}<br>` +
           `<strong>Autor(a):</strong> ${autor}<br>` +
           `<strong>Data de referência:</strong> ${formatarDataReferente(r.data_referente)}`;
         lista.appendChild(li);
