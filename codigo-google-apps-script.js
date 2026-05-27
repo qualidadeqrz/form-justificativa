@@ -84,7 +84,7 @@ function validarCPF(cpfRaw) {
   const cpf = cpfRaw.replace(/\D/g, "");
   const ss  = SpreadsheetApp.openById(SS_REFERENCIA_ID);
   const aba = ss.getSheetByName(ABA_REFERENCIA);
-  if (!aba) return { ok: false, erro: `Aba "${ABA_REFERENCIA}" não encontrada.` };
+  if (!aba) return { ok: false, erro: `Base de dados não encontrada.`};
 
   const dados = aba.getDataRange().getValues();
   for (let i = 1; i < dados.length; i++) {
