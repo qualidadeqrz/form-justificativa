@@ -673,7 +673,7 @@ async function buscarRegistros(cpf) {
 
     if (json.ok && Array.isArray(json.registros) && json.registros.length > 0) {
       json.registros.forEach((r, i) => {
-        const autor = estado.gestor.nome + (estado.gestor.cargo ? ` (${estado.gestor.cargo})` : "");
+        const autor = r.nome + (r.cargo ? ` (${r.cargo})` : "");
         const li = document.createElement("li");
         li.innerHTML =
           `<strong>Registro e setor:</strong> ${r.registro.includes(' - ') ? r.registro.replace(' - ', ' (') + ')' : r.registro} — ${r.setor}<br>` +

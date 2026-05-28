@@ -158,7 +158,9 @@ function buscarRegistros(cpf, data, periodo) {
       setor:           String(row[2]),
       data_referente:  row[3] instanceof Date
         ? Utilities.formatDate(row[3], Session.getScriptTimeZone(), "dd/MM/yyyy")
-        : String(row[3])
+        : String(row[3]),
+      nome:            String(row[6]),
+      cargo:           String(row[7])
     }));
 
   return { ok: true, registros };
