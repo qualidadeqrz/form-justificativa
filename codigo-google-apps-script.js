@@ -1,5 +1,5 @@
-const SS_REFERENCIA_ID  = "1P2ghQVIpjQRgMBQqjjv_X_Tkpp1RJxLFmh-JFI4wIcg";
-const ABA_REFERENCIA    = "Referência";
+const SS_REFERENCIA_ID  = _props.getProperty('REFERENCIA_ID');
+const ABA_REFERENCIA    = _props.getProperty('ABA_NOME');
 
 // Colunas da aba "Referência": Cargo | Nome Completo | Nome | CPF | Regional | Id Loja | Loja | Telefone
 const COL_CARGO         = 1;

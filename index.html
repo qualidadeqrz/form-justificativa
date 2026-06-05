@@ -197,6 +197,33 @@
     /* ── Divisor ── */
     hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
 
+    /* ── Rodapé: Manual do Usuário ── */
+    .manual-foot {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .manual-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: .95rem;
+      transition: opacity .15s ease;
+    }
+    .manual-link:hover { opacity: .7; text-decoration: underline; }
+    .manual-link .manual-ico { font-size: 1.1rem; }
+    .manual-foot small {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 400;
+    }
+
     /* ── Step indicator ── */
     .steps {
       display: flex;
@@ -301,6 +328,12 @@
       <h2>Link expirado</h2>
       <p>O prazo de 24 horas para preenchimento deste formulário encerrou.<br><br>Um novo link será enviado no próximo dia útil.</p>
     </div>
+    <div class="manual-foot">
+      <a class="manual-link js-manual" href="#" target="_blank" rel="noopener">
+        <span class="manual-ico">📄</span> Manual do Usuário
+      </a>
+      <small>Veja como usar o sistema e tirar dúvidas</small>
+    </div>
   </div>
 
   <!-- TELA: Data inválida (sem parâmetro) -->
@@ -310,6 +343,12 @@
       <h2>Link inválido</h2>
       <p>Este link não contém uma data de referência.<br><br>Verifique se você recebeu o link correto pelo WhatsApp ou e-mail.</p>
     </div>
+    <div class="manual-foot">
+      <a class="manual-link js-manual" href="#" target="_blank" rel="noopener">
+        <span class="manual-ico">📄</span> Manual do Usuário
+      </a>
+      <small>Veja como usar o sistema e tirar dúvidas</small>
+    </div>
   </div>
 
   <!-- TELA: Ainda não disponível -->
@@ -318,6 +357,12 @@
       <div class="icon">🕐</div>
       <h2>Ainda não disponível</h2>
       <p id="tela-cedo-msg">O formulário estará disponível a partir das 14h de hoje.</p>
+    </div>
+    <div class="manual-foot">
+      <a class="manual-link js-manual" href="#" target="_blank" rel="noopener">
+        <span class="manual-ico">📄</span> Manual do Usuário
+      </a>
+      <small>Veja como usar o sistema e tirar dúvidas</small>
     </div>
   </div>
 
@@ -412,6 +457,14 @@
       <button class="btn" id="btn-enviar" onclick="enviarFormulario()">Enviar justificativa</button>
     </div>
 
+    <!-- Rodapé: Manual do Usuário -->
+    <div class="manual-foot">
+      <a class="manual-link js-manual" href="#" target="_blank" rel="noopener">
+        <span class="manual-ico">📄</span> Manual do Usuário
+      </a>
+      <small>Veja como usar o sistema e tirar dúvidas</small>
+    </div>
+
   </div>
 
   <!-- TELA: Envio confirmado -->
@@ -425,6 +478,12 @@
         <button class="btn" onclick="location.reload()" style="max-width:200px;">Atualizar página</button>
       </div>
     </div>
+    <div class="manual-foot">
+      <a class="manual-link js-manual" href="#" target="_blank" rel="noopener">
+        <span class="manual-ico">📄</span> Manual do Usuário
+      </a>
+      <small>Veja como usar o sistema e tirar dúvidas</small>
+    </div>
   </div>
 
 
@@ -432,6 +491,13 @@
 
 // CONFIGURAÇÃO — altere apenas esta seção
 const API_URL = "https://script.google.com/macros/s/AKfycby0OPdq3r6ktEM0mwd7-REzFipKVoIUGJ7a0xcv5P1Zm0cMRyo76kaurk8HKBHYpOX6CA/exec";
+
+// ID do PDF do Manual do Usuário no Google Drive (precisa estar com acesso "Qualquer pessoa com o link")
+const MANUAL_PDF_ID = "1hihwaPln-aJpcBQeBWrCZSIMc3K1xq23";
+const MANUAL_URL = `https://drive.google.com/file/d/${MANUAL_PDF_ID}/view`;
+
+// Aplica o link do manual em todos os rodapés da página
+document.querySelectorAll(".js-manual").forEach(a => { a.href = MANUAL_URL; });
 
 // Setores por tipo de registro
 const SETORES = {
