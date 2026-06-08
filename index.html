@@ -356,7 +356,7 @@
     <div class="full-screen show">
       <div class="icon">🕐</div>
       <h2>Ainda não disponível</h2>
-      <p id="tela-cedo-msg">O formulário estará disponível a partir das 14h de hoje.</p>
+      <p id="tela-cedo-msg">O formulário estará disponível a partir das 13h de hoje.</p>
     </div>
     <div class="manual-foot">
       <a class="manual-link js-manual" href="#" target="_blank" rel="noopener">
@@ -563,10 +563,10 @@ function gerarPeriodo(inicio, fim) {
   const hr = 15
   const min = 0
 
-  // Calcula janela de acesso: das 14h do dia "data" até 14h do dia seguinte ao "data_fim"
+  // Calcula janela de acesso: das 13h do dia "data" até 15h do segundo dia seguinte ao "data_fim"
   const fimPeriodo = (dataFim && /^\d{4}-\d{2}-\d{2}$/.test(dataFim)) ? dataFim : data;
   const [afim, mfim, dfim] = fimPeriodo.split("-").map(Number);
-  const inicio    = new Date(afim, mfim-1, dfim, 14, min, 0);        // 14h00 do último dia do período (data_fim)
+  const inicio    = new Date(afim, mfim-1, dfim, 13, min, 0);        // 14h00 do último dia do período (data_fim)
   const expiracao = new Date(afim, mfim-1, dfim+2, hr, min, 0);      // 15h do segundo dia seguinte
   const agora     = new Date();
 
